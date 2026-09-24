@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'accounts.apps.AccountsConfig',
     'jobs',
-    'profiles',
+    'profiles.apps.ProfilesConfig',
 ]
 
 LOGIN_URL = 'login'

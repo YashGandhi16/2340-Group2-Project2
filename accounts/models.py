@@ -26,3 +26,7 @@ class Profile(models.Model):
     @property
     def is_admin(self):
         return self.role == Role.ADMIN
+
+    @property
+    def is_recruiter(self):
+        return self.role == Role.RECRUITER
