@@ -9,6 +9,9 @@
       <a href="{% url 'recruiter_dashboard' %}">Recruiter dashboard</a>
       · <a href="{% url 'create_job' %}">Post a job</a>
     {% endif %}
+    {% if user.profile.is_job_seeker %}
+      <a href="{% url 'profile' %}">My profile</a>
+    {% endif %}
   </p>
   {# Django 5 only accepts logout via POST, so this must be a form, not a link. #}
   <form method="post" action="{% url 'logout' %}">

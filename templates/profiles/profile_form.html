@@ -1,0 +1,12 @@
+<h1>My profile</h1>
+<p><a href="{% url 'home' %}">Back to home</a></p>
+{% if messages %}
+    {% for message in message %}
+        <p>{{ message }} </p>
+    {% endfor %}
+{% endif %}
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p}}
+    <button type="submit">Save profile</button>
+</form>

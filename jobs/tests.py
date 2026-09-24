@@ -352,3 +352,38 @@ class RecruiterPostingTests(TestCase):
         self.assertEqual([j.title for j in response.context['jobs']], ['Python Dev'])
         response = self.client.get(reverse('job_list'), {'location': 'remote'})
         self.assertEqual([j.title for j in response.context['jobs']], ['Java Dev'])
+
+
+class CandidateSearchTests(TestCase):
+    def setUp(self):
+        self.recruiter = User.objects.create_user(username='recruiter', password='pass12345')
+        self.recruiter.profile.role = Role.RECRUITER
+        self.recruiter.profile.save()
+        self.seeker = User.objects.create_user(username='matching-seeker', password='pass12345')
+        matching_profile = self.seeker.candidate_profile
+        matching_profile.skills = 'Python, Django'
+        matching_profile.location = 'Atlanta, GA'
+        matching_profile.work_experience = 'Built a Django recruiting project.'
+        matching_profile.save()
+        self.other_seeker = User.objects.create_user(username='other-seeker', password='pass12345')
+        other_profile = self.other_seeker.candidate_profile
+        other_profile.skills = 'Java'
+        other_profile.location = 'Remote'
+        other_profile.work_experience = 'Built an Android project.'
+        other_profile.save()
+
+    def test_recruiter_can_filter_candidates(self):
+        self.client.login(username='recruiter', password='pass12345')
+        response = self.client.get(
+            reverse('candidate_search'),
+            {'skills': 'django', 'location': 'atlanta', 'projects': 'recruiting'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'matching-seeker')
+        self.assertNotContains(response, 'other-seeker')
+
+    def test_job_seeker_cannot_search_candidates(self):
+        self.client.login(username='matching-seeker', password='pass12345')
+        response = self.client.get(reverse('candidate_search'))
+        self.assertRedirects(response, reverse('home'))

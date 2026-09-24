@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from accounts.models import Role
 from accounts.views import job_seeker_required, recruiter_required
+from profiles.models import CandidateProfile
 
 from .forms import JobPostingForm
 from .models import Job, JobApplication
@@ -40,6 +41,36 @@ def recruiter_dashboard(request):
         .order_by('-posted_at')
     )
     return render(request, 'jobs/recruiter_dashboard.html', {'postings': postings})
+
+
+
+@recruiter_required
+def candidate_search(request):
+    candidates = CandidateProfile.objects.select_related('user').all()
+    skills = request.GET.get('skills', '').strip()
+    location = request.GET.get('location', '').strip()
+    projects = request.GET.get('projects', '').strip()
+
+    if skills:
+        candidates = candidates.filter(skills__icontains=skills)
+    if location:
+        candidates = candidates.filter(location__icontains=location)
+    if projects:
+        candidates = candidates.filter(
+            Q(work_experience__icontains=projects)
+            | Q(summary__icontains=projects)
+        )
+
+    return render(
+        request,
+        'jobs/candidate_search.html',
+        {
+            'candidates': candidates,
+            'skills': skills,
+            'location': location,
+            'projects': projects,
+        },
+    )
 
 
 @recruiter_required

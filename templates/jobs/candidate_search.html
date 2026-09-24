@@ -1,0 +1,45 @@
+<h1>Search candidates</h1>
+
+<form method="get">
+  <p>
+    <label for="id_skills">Skills</label>
+    <input id="id_skills" type="search" name="skills" value="{{ skills }}">
+  </p>
+  <p>
+    <label for="id_location">Location</label>
+    <input id="id_location" type="search" name="location" value="{{ location }}">
+  </p>
+  <p>
+    <label for="id_projects">Projects or experience</label>
+    <input id="id_projects" type="search" name="projects" value="{{ projects }}">
+  </p>
+  <button type="submit">Search</button>
+</form>
+
+<h2>Candidates</h2>
+<ul>
+  {% for candidate_profile in candidates %}
+    <li>
+      <h3>{{ candidate_profile.user.get_full_name|default:candidate_profile.user.username }}</h3>
+      {% if candidate_profile.headline %}<p>{{ candidate_profile.headline }}</p>{% endif %}
+      {% if candidate_profile.location %}<p><strong>Location:</strong> {{ candidate_profile.location }}</p>{% endif %}
+      {% if candidate_profile.skill_list %}
+        <p><strong>Skills:</strong> {{ candidate_profile.skill_list|join:', ' }}</p>
+      {% endif %}
+      {% if candidate_profile.work_experience %}
+        <p><strong>Experience:</strong> {{ candidate_profile.work_experience|truncatewords:30 }}</p>
+      {% endif %}
+      {% if candidate_profile.links %}
+        <p>
+          {% for label, url in candidate_profile.links %}
+            <a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ label }}</a>{% if not forloop.last %} · {% endif %}
+          {% endfor %}
+        </p>
+      {% endif %}
+    </li>
+  {% empty %}
+    <li>No candidates match those filters.</li>
+  {% endfor %}
+</ul>
+
+<p><a href="{% url 'recruiter_dashboard' %}">Back to dashboard</a></p>
