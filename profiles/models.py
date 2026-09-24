@@ -17,6 +17,18 @@ class CandidateProfile(models.Model):
     linkedin_url = models.URLField(blank=True)
     github_url = models.URLField(blank=True)
     portfolio_url = models.URLField(blank=True)
+
+    #privacy settings
+    show_headline = models.BooleanField(default=True)
+    show_skills = models.BooleanField(default=True)
+    show_summary = models.BooleanField(default=True)
+    show_location = models.BooleanField(default=True)
+    show_education = models.BooleanField(default=True)
+    show_work_experience = models.BooleanField(default=True)
+    show_linkedin = models.BooleanField(default=True)
+    show_github = models.BooleanField(default=True)
+    show_portfolio = models.BooleanField(default=True)
+    
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
