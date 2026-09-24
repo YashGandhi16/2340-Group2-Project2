@@ -10,7 +10,11 @@
   </ul>
 {% endif %}
 
-{% if is_job_seeker %}
+{% if is_recruiter %}
+  <p>
+    <a href="{% url 'application_list' %}?job={{ job.id }}">Review applicants ({{ application_count }})</a>
+  </p>
+{% elif is_job_seeker %}
   {% if already_applied %}
     <p>You have already applied to this job.</p>
   {% else %}

@@ -6,6 +6,9 @@
     {% if user.profile.is_admin %}
       · <a href="{% url 'manage_users' %}">Manage users</a>
     {% endif %}
+    {% if user.profile.is_recruiter %}
+      · <a href="{% url 'application_list' %}">Review applications</a>
+    {% endif %}
   {% else %}
     <a href="{% url 'login' %}">Log in</a>
   {% endif %}

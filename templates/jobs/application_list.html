@@ -1,0 +1,31 @@
+<h1>{% if job %}Applicants for {{ job.title }} at {{ job.company }}{% else %}Applications{% endif %}</h1>
+
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{% if job %}
+  <p><a href="{% url 'application_list' %}">Show applications for all jobs</a></p>
+{% endif %}
+
+<ul>
+  {% for app in applications %}
+    <li>
+      <a href="{% url 'review_application' app.id %}">{{ app.applicant.get_full_name|default:app.applicant.username }}</a>
+      {% if app.applicant.candidate_profile.headline %}({{ app.applicant.candidate_profile.headline }}){% endif %}:
+      {{ app.job.title }} at {{ app.job.company }},
+      applied {{ app.applied_at|date:"M j, Y" }}
+    </li>
+  {% empty %}
+    <li>No applications yet.</li>
+  {% endfor %}
+</ul>
+
+<p>
+  {% if job %}<a href="{% url 'job_detail' job.id %}">Back to job</a> · {% endif %}
+  <a href="{% url 'home' %}">Home</a>
+</p>
