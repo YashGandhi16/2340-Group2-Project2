@@ -1,0 +1,32 @@
+<h1>{{ job.title }}</h1>
+<p><strong>{{ job.company }}</strong></p>
+<p>{{ job.description|linebreaks }}</p>
+
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{% if is_job_seeker %}
+  {% if already_applied %}
+    <p>You have already applied to this job.</p>
+  {% else %}
+    <h2>Apply with one click</h2>
+    <form method="post" action="{% url 'apply_to_job' job.id %}">
+      {% csrf_token %}
+      <label for="note">Tailored note</label><br>
+      <textarea id="note" name="note" rows="4" cols="60" required
+        placeholder="Mention why you are a strong fit for this role."></textarea><br>
+      <button type="submit">Apply now</button>
+    </form>
+  {% endif %}
+{% elif user.is_authenticated %}
+  <p>Only Job Seekers can apply. Switch your role or log in as a Job Seeker.</p>
+{% else %}
+  <p><a href="{% url 'login' %}?next={% url 'job_detail' job.id %}">Log in</a> as a Job Seeker to apply.</p>
+{% endif %}
+
+<p><a href="{% url 'job_list' %}">Back to jobs</a> · <a href="{% url 'home' %}">Home</a></p>

@@ -1,0 +1,21 @@
+<h1>Open jobs</h1>
+
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<ul>
+  {% for job in jobs %}
+    <li>
+      <a href="{% url 'job_detail' job.id %}">{{ job.title }}</a> — {{ job.company }}
+    </li>
+  {% empty %}
+    <li>No jobs posted yet.</li>
+  {% endfor %}
+</ul>
+
+<p><a href="{% url 'home' %}">Home</a></p>

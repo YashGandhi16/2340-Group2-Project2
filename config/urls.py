@@ -18,4 +18,5 @@ urlpatterns = [
         name='logout',
     ),
     path('accounts/', include('accounts.urls')),
+    path('jobs/', include('jobs.urls')),
 ]
