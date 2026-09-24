@@ -8,14 +8,32 @@
   </ul>
 {% endif %}
 
+<form method="get">
+  <label>
+    Search
+    <input type="search" name="q" value="{{ query }}" placeholder="Position, company, or keyword">
+  </label>
+  <label>
+    Location
+    <input type="search" name="location" value="{{ location }}" placeholder="e.g. Atlanta">
+  </label>
+  <button type="submit">Search</button>
+  {% if query or location %}<a href="{% url 'job_list' %}">Clear</a>{% endif %}
+</form>
+
 <ul>
   {% for job in jobs %}
     <li>
       <a href="{% url 'job_detail' job.id %}">{{ job.title }}</a> — {{ job.company }}
+      {% if job.location %}· {{ job.location }}{% endif %}
+      {% if job.closing_date %}· closes {{ job.closing_date|date:"M j, Y" }}{% endif %}
     </li>
   {% empty %}
-    <li>No jobs posted yet.</li>
+    <li>{% if query or location %}No open jobs match your search.{% else %}No jobs posted yet.{% endif %}</li>
   {% endfor %}
 </ul>
 
-<p><a href="{% url 'home' %}">Home</a></p>
+<p>
+  {% if user.profile.is_recruiter %}<a href="{% url 'recruiter_dashboard' %}">Recruiter dashboard</a> · {% endif %}
+  <a href="{% url 'home' %}">Home</a>
+</p>

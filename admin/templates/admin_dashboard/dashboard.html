@@ -1,0 +1,83 @@
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<h1>Admin dashboard</h1>
+<p>Signed in as <strong>{{ user.username }}</strong> ({{ user.profile.get_role_display }})</p>
+
+<h2>Accounts by role</h2>
+<ul>
+  <li><a href="{% url 'admin_dashboard:dashboard' %}">All users</a>: {{ total_users }}</li>
+  {% for value, label, count in role_counts %}
+    <li><a href="?role={{ value }}">{{ label }}</a>: {{ count }}</li>
+  {% endfor %}
+</ul>
+
+<form method="get">
+  <label>
+    Search
+    <input type="search" name="q" value="{{ query }}" placeholder="Username or email">
+  </label>
+  <label>
+    Role
+    <select name="role">
+      <option value="">All roles</option>
+      {% for value, label in roles %}
+        <option value="{{ value }}" {% if role_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit">Filter</button>
+</form>
+
+<h2>User accounts</h2>
+<table border="1" cellpadding="6" style="border-collapse: collapse;">
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Email</th>
+      <th>Current role</th>
+      <th>Status</th>
+      <th>Last login</th>
+      <th>Change</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+      <tr>
+        <td>{{ u.username }}{% if u == user %} (you){% endif %}</td>
+        <td>{{ u.email|default:"—" }}</td>
+        <td>{{ u.profile.get_role_display }}</td>
+        <td>{% if u.is_active %}Active{% else %}Inactive{% endif %}</td>
+        <td>{{ u.last_login|default:"Never" }}</td>
+        <td>
+          <form method="post" action="{% url 'admin_dashboard:update_user' u.id %}">
+            {% csrf_token %}
+            <select name="role" aria-label="Role for {{ u.username }}">
+              {% for value, label in roles %}
+                <option value="{{ value }}" {% if u.profile.role == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <select name="is_active" aria-label="Status for {{ u.username }}">
+              <option value="1" {% if u.is_active %}selected{% endif %}>Active</option>
+              <option value="0" {% if not u.is_active %}selected{% endif %}>Inactive</option>
+            </select>
+            <button type="submit">Update</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">No users match.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p><a href="{% url 'home' %}">Home</a> · <a href="{% url 'admin:index' %}">Django admin site</a></p>
+<form method="post" action="{% url 'logout' %}">
+  {% csrf_token %}
+  <button type="submit">Log out</button>
+</form>

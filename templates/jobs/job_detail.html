@@ -1,6 +1,19 @@
 <h1>{{ job.title }}</h1>
-<p><strong>{{ job.company }}</strong></p>
-<p>{{ job.description|linebreaks }}</p>
+<p><strong>{{ job.company }}</strong>{% if job.location %} · {{ job.location }}{% endif %}</p>
+{% if job.closing_date %}
+  <p>
+    {% if job.is_open %}Applications close {{ job.closing_date|date:"M j, Y" }}
+    {% else %}<strong>Closed</strong> — applications closed {{ job.closing_date|date:"M j, Y" }}{% endif %}
+  </p>
+{% endif %}
+
+<h2>Job description</h2>
+{{ job.description|linebreaks }}
+
+{% if job.requirements %}
+  <h2>Applicant criteria</h2>
+  {{ job.requirements|linebreaks }}
+{% endif %}
 
 {% if messages %}
   <ul>
@@ -13,10 +26,13 @@
 {% if is_recruiter %}
   <p>
     <a href="{% url 'application_list' %}?job={{ job.id }}">Review applicants ({{ application_count }})</a>
+    {% if is_owner %}· <a href="{% url 'edit_job' job.id %}">Edit posting</a>{% endif %}
   </p>
 {% elif is_job_seeker %}
   {% if already_applied %}
     <p>You have already applied to this job.</p>
+  {% elif not job.is_open %}
+    <p>This posting is no longer accepting applications.</p>
   {% else %}
     <h2>Apply with one click</h2>
     <form method="post" action="{% url 'apply_to_job' job.id %}">

@@ -1,15 +1,20 @@
 <h1>Job board</h1>
 <p><a href="{% url 'job_list' %}">Browse jobs</a></p>
-<p>
-  {% if user.is_authenticated %}
-    <a href="{% url 'logout' %}">Log out</a>
-    {% if user.profile.is_admin %}
-      · <a href="{% url 'manage_users' %}">Manage users</a>
+{% if user.is_authenticated %}
+  <p>
+    {% if user.is_superuser %}
+      <a href="{% url 'admin_dashboard:dashboard' %}">Admin dashboard</a>
     {% endif %}
     {% if user.profile.is_recruiter %}
-      · <a href="{% url 'application_list' %}">Review applications</a>
+      <a href="{% url 'recruiter_dashboard' %}">Recruiter dashboard</a>
+      · <a href="{% url 'create_job' %}">Post a job</a>
     {% endif %}
-  {% else %}
-    <a href="{% url 'login' %}">Log in</a>
-  {% endif %}
-</p>
+  </p>
+  {# Django 5 only accepts logout via POST, so this must be a form, not a link. #}
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Log out</button>
+  </form>
+{% else %}
+  <p><a href="{% url 'login' %}">Log in</a> · <a href="{% url 'signup' %}">Sign up</a></p>
+{% endif %}

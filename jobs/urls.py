@@ -3,6 +3,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('recruiter/', views.recruiter_dashboard, name='recruiter_dashboard'),
+    path('new/', views.create_job, name='create_job'),
+    path('<int:job_id>/edit/', views.edit_job, name='edit_job'),
     path('applications/', views.application_list, name='application_list'),
     path(
         'applications/<int:application_id>/',

@@ -1,0 +1,9 @@
+<h1>{% if job %}Edit posting: {{ job.title }}{% else %}Post a new job{% endif %}</h1>
+
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">{% if job %}Save changes{% else %}Publish posting{% endif %}</button>
+</form>
+
+<p><a href="{% url 'recruiter_dashboard' %}">Back to dashboard</a></p>

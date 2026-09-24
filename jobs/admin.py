@@ -5,8 +5,9 @@ from .models import Job, JobApplication
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ('title', 'company', 'posted_at')
-    search_fields = ('title', 'company')
+    list_display = ('title', 'company', 'location', 'closing_date', 'posted_by', 'posted_at')
+    list_filter = ('closing_date',)
+    search_fields = ('title', 'company', 'location')
 
 
 @admin.register(JobApplication)

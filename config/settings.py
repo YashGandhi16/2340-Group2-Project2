@@ -40,10 +40,11 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'jobs',
     'profiles.apps.ProfilesConfig',
+    'admin.apps.AdminDashboardConfig',
 ]
 
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'manage_users'
+LOGIN_REDIRECT_URL = 'login_redirect'
 LOGOUT_REDIRECT_URL = 'home'
 
 MIDDLEWARE = [
