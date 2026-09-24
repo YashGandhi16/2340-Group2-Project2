@@ -1,0 +1,37 @@
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<h1>Manage users and roles</h1>
+
+{% for u in users %}
+  <form method="post" style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ccc;">
+    {% csrf_token %}
+    <input type="hidden" name="user_id" value="{{ u.id }}">
+    <p><strong>{{ u.username }}</strong> {% if u.email %}({{ u.email }}){% endif %}</p>
+    <label>
+      Active
+      <select name="is_active">
+        <option value="1" {% if u.is_active %}selected{% endif %}>Yes</option>
+        <option value="0" {% if not u.is_active %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>
+      Role
+      <select name="role">
+        {% for value, label in roles %}
+          <option value="{{ value }}" {% if u.profile.role == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Update</button>
+  </form>
+{% empty %}
+  <p>No users yet.</p>
+{% endfor %}
+
+<p><a href="{% url 'home' %}">Home</a> · <a href="{% url 'logout' %}">Log out</a></p>
