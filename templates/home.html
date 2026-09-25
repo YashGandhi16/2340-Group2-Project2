@@ -11,6 +11,7 @@
     {% endif %}
     {% if user.profile.is_job_seeker %}
       <a href="{% url 'profile' %}">My profile</a>
+      · <a href="{% url 'my_applications' %}">My applications</a>
     {% endif %}
   </p>
   {# Django 5 only accepts logout via POST, so this must be a form, not a link. #}

@@ -57,6 +57,19 @@
 
 <section>
   <h2>Application</h2>
+  <p><strong>Status:</strong> {{ application.get_status_display }}</p>
+  <form method="post">
+    {% csrf_token %}
+    <label>
+      Update status
+      <select name="status">
+        {% for value, label in statuses %}
+          <option value="{{ value }}" {% if application.status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Save status</button>
+  </form>
   <h3>Tailored note</h3>
   {{ application.note|linebreaks }}
   <h3>Job description</h3>

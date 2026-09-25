@@ -1,13 +1,15 @@
 from django.contrib import messages
 from django.db.models import Count, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from accounts.models import Role
 from accounts.views import job_seeker_required, recruiter_required
 from profiles.models import CandidateProfile
 
 from .forms import JobPostingForm
-from .models import Job, JobApplication
+from .models import ApplicationStatus, Job, JobApplication
 
 
 def job_list(request):
@@ -122,10 +124,29 @@ def apply_to_job(request, job_id):
         job=job,
         applicant=request.user,
         note=note,
+        status=ApplicationStatus.APPLIED,
     )
 
     messages.success(request, f'Application sent for {job.title}.')
-    return redirect('job_detail', job_id=job.pk)
+    return redirect('my_applications')
+
+
+@job_seeker_required
+def my_applications(request):
+    """Job Seeker view: track each application through hiring stages."""
+    applications = (
+        JobApplication.objects.filter(applicant=request.user)
+        .select_related('job')
+        .order_by('-applied_at')
+    )
+    return render(
+        request,
+        'jobs/my_applications.html',
+        {
+            'applications': applications,
+            'status_pipeline': ApplicationStatus.choices,
+        },
+    )
 
 
 @recruiter_required
@@ -158,11 +179,27 @@ def review_application(request, application_id):
             'applicant__candidate_profile',
         ),
         pk=application_id,
+        job__posted_by=request.user,
     )
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in ApplicationStatus.values:
+            application.status = new_status
+            application.save(update_fields=['status', 'status_updated_at'])
+            messages.success(
+                request,
+                f'Status updated to {application.get_status_display()}.',
+            )
+            return redirect('review_application', application_id=application.pk)
+        messages.error(request, 'Invalid application status.')
+
     candidate = application.applicant
     candidate_profile = getattr(candidate, 'candidate_profile', None)
     other_applications = (
-        candidate.job_applications.exclude(pk=application.pk).select_related('job')
+        candidate.job_applications.filter(job__posted_by=request.user)
+        .exclude(pk=application.pk)
+        .select_related('job')
     )
     return render(
         request,
@@ -172,7 +209,71 @@ def review_application(request, application_id):
             'candidate': candidate,
             'candidate_profile': candidate_profile,
             'other_applications': other_applications,
+            'statuses': ApplicationStatus.choices,
         },
+    )
+
+
+@recruiter_required
+def hiring_pipeline(request):
+    """Kanban board of applicants for jobs this recruiter posted."""
+    owned_jobs = Job.objects.filter(posted_by=request.user).order_by('-posted_at')
+    applications = (
+        JobApplication.objects.filter(job__posted_by=request.user)
+        .select_related('job', 'applicant', 'applicant__candidate_profile')
+        .order_by('-applied_at')
+    )
+
+    selected_job = None
+    job_id = request.GET.get('job', '').strip()
+    if job_id.isdigit():
+        selected_job = get_object_or_404(Job, pk=job_id, posted_by=request.user)
+        applications = applications.filter(job=selected_job)
+
+    columns = []
+    for value, label in ApplicationStatus.choices:
+        columns.append(
+            {
+                'value': value,
+                'label': label,
+                'applications': [app for app in applications if app.status == value],
+            }
+        )
+
+    return render(
+        request,
+        'jobs/pipeline.html',
+        {
+            'columns': columns,
+            'owned_jobs': owned_jobs,
+            'selected_job': selected_job,
+            'status_values': ApplicationStatus.values,
+        },
+    )
+
+
+@recruiter_required
+@require_POST
+def update_pipeline_status(request, application_id):
+    """JSON endpoint used by Kanban drag-and-drop."""
+    application = get_object_or_404(
+        JobApplication.objects.select_related('job'),
+        pk=application_id,
+        job__posted_by=request.user,
+    )
+    new_status = request.POST.get('status')
+    if new_status not in ApplicationStatus.values:
+        return JsonResponse({'ok': False, 'error': 'Invalid status.'}, status=400)
+
+    application.status = new_status
+    application.save(update_fields=['status', 'status_updated_at'])
+    return JsonResponse(
+        {
+            'ok': True,
+            'application_id': application.pk,
+            'status': application.status,
+            'status_label': application.get_status_display(),
+        }
     )
 
 
@@ -190,11 +291,15 @@ def job_detail(request, job_id):
         and profile.role == Role.RECRUITER
     )
     already_applied = False
+    application_status = None
     if request.user.is_authenticated:
-        already_applied = JobApplication.objects.filter(
+        existing = JobApplication.objects.filter(
             job=job,
             applicant=request.user,
-        ).exists()
+        ).first()
+        if existing:
+            already_applied = True
+            application_status = existing.get_status_display()
 
     return render(
         request,
@@ -206,5 +311,6 @@ def job_detail(request, job_id):
             'application_count': job.applications.count() if is_recruiter else None,
             'is_owner': is_recruiter and job.posted_by_id == request.user.pk,
             'already_applied': already_applied,
+            'application_status': application_status,
         },
     )

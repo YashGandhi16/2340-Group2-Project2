@@ -42,6 +42,14 @@ class Job(models.Model):
         return self.closing_date is None or self.closing_date >= timezone.localdate()
 
 
+class ApplicationStatus(models.TextChoices):
+    APPLIED = 'APPLIED', 'Applied'
+    REVIEW = 'REVIEW', 'Review'
+    INTERVIEW = 'INTERVIEW', 'Interview'
+    OFFER = 'OFFER', 'Offer'
+    CLOSED = 'CLOSED', 'Closed'
+
+
 class JobApplication(models.Model):
     job = models.ForeignKey(
         Job,
@@ -54,7 +62,13 @@ class JobApplication(models.Model):
         related_name='job_applications',
     )
     note = models.TextField(help_text='Personalized message for the recruiter.')
+    status = models.CharField(
+        max_length=20,
+        choices=ApplicationStatus.choices,
+        default=ApplicationStatus.APPLIED,
+    )
     applied_at = models.DateTimeField(auto_now_add=True)
+    status_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
@@ -66,4 +80,9 @@ class JobApplication(models.Model):
         ordering = ['-applied_at']
 
     def __str__(self):
-        return f'{self.applicant.username} → {self.job}'
+        return f'{self.applicant.username} → {self.job} ({self.get_status_display()})'
+
+    @property
+    def status_pipeline(self):
+        """Ordered stages for seeker tracking UI (current stage highlighted in templates)."""
+        return list(ApplicationStatus.choices)

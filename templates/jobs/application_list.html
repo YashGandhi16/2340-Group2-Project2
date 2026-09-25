@@ -18,6 +18,7 @@
       <a href="{% url 'review_application' app.id %}">{{ app.applicant.get_full_name|default:app.applicant.username }}</a>
       {% if app.applicant.candidate_profile.headline %}({{ app.applicant.candidate_profile.headline }}){% endif %}:
       {{ app.job.title }} at {{ app.job.company }},
+      status <strong>{{ app.get_status_display }}</strong>,
       applied {{ app.applied_at|date:"M j, Y" }}
     </li>
   {% empty %}

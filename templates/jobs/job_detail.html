@@ -30,7 +30,11 @@
   </p>
 {% elif is_job_seeker %}
   {% if already_applied %}
-    <p>You have already applied to this job.</p>
+    <p>
+      You have already applied to this job.
+      Current status: <strong>{{ application_status }}</strong>.
+      <a href="{% url 'my_applications' %}">Track all applications</a>
+    </p>
   {% elif not job.is_open %}
     <p>This posting is no longer accepting applications.</p>
   {% else %}

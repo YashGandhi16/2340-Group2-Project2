@@ -1,0 +1,44 @@
+<h1>My applications</h1>
+
+<p>Track where each application stands: Applied → Review → Interview → Offer → Closed.</p>
+
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{% for app in applications %}
+  <section style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #ccc;">
+    <h2>
+      <a href="{% url 'job_detail' app.job.id %}">{{ app.job.title }}</a>
+      at {{ app.job.company }}
+    </h2>
+    <p>
+      Applied {{ app.applied_at|date:"M j, Y" }}
+      · Current status: <strong>{{ app.get_status_display }}</strong>
+    </p>
+    <p aria-label="Application status pipeline">
+      {% for value, label in status_pipeline %}
+        {% if value == app.status %}
+          <strong>[{{ label }}]</strong>
+        {% else %}
+          {{ label }}
+        {% endif %}
+        {% if not forloop.last %} → {% endif %}
+      {% endfor %}
+    </p>
+    {% if app.note %}
+      <p><em>Your note:</em> {{ app.note|truncatewords:30 }}</p>
+    {% endif %}
+  </section>
+{% empty %}
+  <p>You have not applied to any jobs yet. <a href="{% url 'job_list' %}">Browse jobs</a>.</p>
+{% endfor %}
+
+<p>
+  <a href="{% url 'job_list' %}">Browse jobs</a>
+  · <a href="{% url 'home' %}">Home</a>
+</p>

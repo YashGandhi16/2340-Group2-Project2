@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from accounts.models import Role
 
-from .models import Job, JobApplication
+from .models import ApplicationStatus, Job, JobApplication
 
 User = get_user_model()
 
@@ -42,9 +42,10 @@ class ApplyToJobTests(TestCase):
         self.client.login(username='seeker', password='pass12345')
         url = reverse('apply_to_job', args=[self.job.pk])
         response = self.client.post(url, {'note': 'I love Django and your mission.'})
-        self.assertRedirects(response, reverse('job_detail', args=[self.job.pk]))
+        self.assertRedirects(response, reverse('my_applications'))
         application = JobApplication.objects.get(job=self.job, applicant=self.seeker)
         self.assertEqual(application.note, 'I love Django and your mission.')
+        self.assertEqual(application.status, 'APPLIED')
 
     def test_apply_requires_non_empty_note(self):
         """Edge case: a blank/whitespace-only note is rejected."""
@@ -97,6 +98,8 @@ class ReviewApplicationTests(TestCase):
         self.recruiter = User.objects.create_user(username='recruiter', password='pass12345')
         self.recruiter.profile.role = Role.RECRUITER
         self.recruiter.profile.save()
+        self.job.posted_by = self.recruiter
+        self.job.save(update_fields=['posted_by'])
 
         self.application = JobApplication.objects.create(
             job=self.job,
@@ -165,6 +168,10 @@ class ReviewApplicationDetailsTests(TestCase):
         self.recruiter = User.objects.create_user(username='recruiter', password='pass12345')
         self.recruiter.profile.role = Role.RECRUITER
         self.recruiter.profile.save()
+        self.job.posted_by = self.recruiter
+        self.job.save(update_fields=['posted_by'])
+        self.other_job.posted_by = self.recruiter
+        self.other_job.save(update_fields=['posted_by'])
 
     def login_recruiter(self):
         self.client.login(username='recruiter', password='pass12345')
@@ -386,4 +393,165 @@ class CandidateSearchTests(TestCase):
     def test_job_seeker_cannot_search_candidates(self):
         self.client.login(username='matching-seeker', password='pass12345')
         response = self.client.get(reverse('candidate_search'))
+        self.assertRedirects(response, reverse('home'))
+
+
+class TrackApplicationStatusTests(TestCase):
+    """Job Seekers tracking application status through hiring stages."""
+
+    def setUp(self):
+        self.client = Client()
+        self.job = Job.objects.create(
+            title='Frontend Engineer',
+            company='Beta Inc',
+            description='Build UIs.',
+        )
+        self.seeker = User.objects.create_user(username='tracker', password='pass12345')
+        self.seeker.profile.role = Role.JOB_SEEKER
+        self.seeker.profile.save()
+        self.other = User.objects.create_user(username='other-seeker', password='pass12345')
+        self.other.profile.role = Role.JOB_SEEKER
+        self.other.profile.save()
+        self.recruiter = User.objects.create_user(username='pipeline-rec', password='pass12345')
+        self.recruiter.profile.role = Role.RECRUITER
+        self.recruiter.profile.save()
+        self.job.posted_by = self.recruiter
+        self.job.save(update_fields=['posted_by'])
+        self.application = JobApplication.objects.create(
+            job=self.job,
+            applicant=self.seeker,
+            note='Excited to join.',
+            status=ApplicationStatus.APPLIED,
+        )
+
+    def test_seeker_sees_own_applications_and_pipeline(self):
+        self.client.login(username='tracker', password='pass12345')
+        response = self.client.get(reverse('my_applications'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Frontend Engineer')
+        self.assertContains(response, 'Applied')
+        self.assertContains(response, 'Review')
+        self.assertContains(response, 'Interview')
+        self.assertContains(response, 'Offer')
+        self.assertContains(response, 'Closed')
+
+    def test_seeker_only_sees_own_applications(self):
+        JobApplication.objects.create(
+            job=self.job,
+            applicant=self.other,
+            note='Other note',
+        )
+        self.client.login(username='tracker', password='pass12345')
+        response = self.client.get(reverse('my_applications'))
+        self.assertContains(response, 'Excited to join')
+        self.assertNotContains(response, 'Other note')
+
+    def test_recruiter_can_advance_status_and_seeker_sees_it(self):
+        self.client.login(username='pipeline-rec', password='pass12345')
+        url = reverse('review_application', args=[self.application.pk])
+        response = self.client.post(url, {'status': ApplicationStatus.INTERVIEW})
+        self.assertRedirects(response, url)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, ApplicationStatus.INTERVIEW)
+
+        self.client.login(username='tracker', password='pass12345')
+        tracking = self.client.get(reverse('my_applications'))
+        self.assertContains(tracking, 'Interview')
+        detail = self.client.get(reverse('job_detail', args=[self.job.pk]))
+        self.assertContains(detail, 'Interview')
+
+    def test_recruiter_cannot_open_my_applications(self):
+        self.client.login(username='pipeline-rec', password='pass12345')
+        response = self.client.get(reverse('my_applications'))
+        self.assertRedirects(response, reverse('home'))
+
+
+class HiringPipelineTests(TestCase):
+    """Recruiter Kanban pipeline for owned job applications."""
+
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user(username='owner-rec', password='pass12345')
+        self.owner.profile.role = Role.RECRUITER
+        self.owner.profile.save()
+        self.other_rec = User.objects.create_user(username='other-rec', password='pass12345')
+        self.other_rec.profile.role = Role.RECRUITER
+        self.other_rec.profile.save()
+        self.seeker = User.objects.create_user(username='pipeline-seeker', password='pass12345')
+        self.seeker.profile.role = Role.JOB_SEEKER
+        self.seeker.profile.save()
+
+        self.job = Job.objects.create(
+            title='Data Engineer',
+            company='Cascade',
+            description='Pipelines.',
+            posted_by=self.owner,
+        )
+        self.other_job = Job.objects.create(
+            title='Analyst',
+            company='Elsewhere',
+            description='Reports.',
+            posted_by=self.other_rec,
+        )
+        self.application = JobApplication.objects.create(
+            job=self.job,
+            applicant=self.seeker,
+            note='Ready to build pipelines.',
+            status=ApplicationStatus.APPLIED,
+        )
+        JobApplication.objects.create(
+            job=self.other_job,
+            applicant=self.seeker,
+            note='Should not appear on owner board.',
+            status=ApplicationStatus.REVIEW,
+        )
+
+    def test_pipeline_shows_only_owned_job_applications(self):
+        self.client.login(username='owner-rec', password='pass12345')
+        response = self.client.get(reverse('hiring_pipeline'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Ready to build pipelines.')
+        self.assertNotContains(response, 'Should not appear on owner board.')
+        self.assertContains(response, 'Hiring pipeline')
+
+    def test_pipeline_can_filter_by_job(self):
+        second = Job.objects.create(
+            title='Second Role',
+            company='Cascade',
+            description='More work.',
+            posted_by=self.owner,
+        )
+        JobApplication.objects.create(
+            job=second,
+            applicant=self.seeker,
+            note='Second application note.',
+            status=ApplicationStatus.APPLIED,
+        )
+        self.client.login(username='owner-rec', password='pass12345')
+        response = self.client.get(reverse('hiring_pipeline'), {'job': self.job.pk})
+        self.assertContains(response, 'Ready to build pipelines.')
+        self.assertNotContains(response, 'Second application note.')
+
+    def test_drag_status_update_endpoint(self):
+        self.client.login(username='owner-rec', password='pass12345')
+        url = reverse('update_pipeline_status', args=[self.application.pk])
+        response = self.client.post(url, {'status': ApplicationStatus.OFFER})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['ok'])
+        self.assertEqual(data['status'], ApplicationStatus.OFFER)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, ApplicationStatus.OFFER)
+
+    def test_other_recruiter_cannot_update_status(self):
+        self.client.login(username='other-rec', password='pass12345')
+        url = reverse('update_pipeline_status', args=[self.application.pk])
+        response = self.client.post(url, {'status': ApplicationStatus.INTERVIEW})
+        self.assertEqual(response.status_code, 404)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, ApplicationStatus.APPLIED)
+
+    def test_seeker_cannot_open_pipeline(self):
+        self.client.login(username='pipeline-seeker', password='pass12345')
+        response = self.client.get(reverse('hiring_pipeline'))
         self.assertRedirects(response, reverse('home'))

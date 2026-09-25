@@ -1,0 +1,94 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hiring pipeline</title>
+  <link rel="stylesheet" href="{% static 'jobs/pipeline.css' %}">
+</head>
+<body class="pipeline-page">
+  <div class="pipeline-shell">
+    <header class="pipeline-topbar">
+      <div>
+        <h1>Hiring pipeline</h1>
+        <p>
+          {% if selected_job %}
+            Applicants for <strong>{{ selected_job.title }}</strong> at {{ selected_job.company }}
+          {% else %}
+            All applicants across jobs you posted. Drag cards between stages.
+          {% endif %}
+        </p>
+      </div>
+      <nav class="pipeline-nav">
+        <a href="{% url 'recruiter_dashboard' %}">Dashboard</a>
+        <a href="{% url 'application_list' %}">All applications</a>
+        <a href="{% url 'home' %}">Home</a>
+      </nav>
+    </header>
+
+    <form class="pipeline-filters" method="get" action="{% url 'hiring_pipeline' %}">
+      <label for="job-filter">Filter by job</label>
+      <select id="job-filter" name="job">
+        <option value="">All my jobs</option>
+        {% for job in owned_jobs %}
+          <option value="{{ job.id }}" {% if selected_job and selected_job.id == job.id %}selected{% endif %}>
+            {{ job.title }} · {{ job.company }}
+          </option>
+        {% endfor %}
+      </select>
+    </form>
+
+    {% if not owned_jobs %}
+      <p class="pipeline-empty">You haven’t posted any jobs yet. <a href="{% url 'create_job' %}">Post a job</a> to start a pipeline.</p>
+    {% else %}
+      <div
+        id="pipeline-board"
+        class="pipeline-board"
+        data-csrf-token="{{ csrf_token }}"
+        data-status-url-template="{% url 'update_pipeline_status' 0 %}"
+      >
+        {% for column in columns %}
+          <section class="pipeline-column" data-status="{{ column.value }}">
+            <div class="pipeline-column-header">
+              <h2>{{ column.label }}</h2>
+              <span class="pipeline-count">{{ column.applications|length }}</span>
+            </div>
+            <div class="pipeline-cards">
+              {% for app in column.applications %}
+                <article
+                  class="pipeline-card"
+                  draggable="true"
+                  data-application-id="{{ app.id }}"
+                  data-status="{{ app.status }}"
+                >
+                  <h3>
+                    <a href="{% url 'review_application' app.id %}">
+                      {{ app.applicant.get_full_name|default:app.applicant.username }}
+                    </a>
+                  </h3>
+                  <p class="meta">
+                    {{ app.job.title }} · {{ app.job.company }}<br>
+                    Applied {{ app.applied_at|date:"M j, Y" }}
+                  </p>
+                  {% if app.note %}
+                    <p class="note">{{ app.note|truncatewords:28 }}</p>
+                  {% endif %}
+                </article>
+              {% empty %}
+                <p class="pipeline-empty">Drop applicants here</p>
+              {% endfor %}
+              {% if column.applications %}
+                <p class="pipeline-empty" hidden>Drop applicants here</p>
+              {% endif %}
+            </div>
+          </section>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div id="pipeline-toast" class="pipeline-toast" role="status" aria-live="polite"></div>
+  <script src="{% static 'jobs/pipeline.js' %}"></script>
+</body>
+</html>
