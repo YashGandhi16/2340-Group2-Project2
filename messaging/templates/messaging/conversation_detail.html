@@ -1,0 +1,29 @@
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<h1>Conversation with {{ other.get_full_name|default:other.username }}</h1>
+<p>
+  {% if user == conversation.recruiter %}Candidate{% else %}Recruiter{% endif %}
+  · started {{ conversation.created_at|date:"M j, Y" }}
+</p>
+
+{% for msg in thread %}
+  <div style="margin-bottom: 0.75rem; padding: 0.5rem; border-left: 3px solid {% if msg.sender == user %}#4a7{% else %}#888{% endif %};">
+    <strong>{% if msg.sender == user %}You{% else %}{{ msg.sender.get_full_name|default:msg.sender.username }}{% endif %}</strong>
+    <small>{{ msg.sent_at|date:"M j, Y, g:i a" }}</small>
+    {{ msg.body|linebreaks }}
+  </div>
+{% endfor %}
+
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Send</button>
+</form>
+
+<p><a href="{% url 'messaging:inbox' %}">Back to messages</a> · <a href="{% url 'home' %}">Home</a></p>

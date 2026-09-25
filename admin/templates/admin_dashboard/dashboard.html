@@ -8,6 +8,7 @@
 
 <h1>Admin dashboard</h1>
 <p>Signed in as <strong>{{ user.username }}</strong> ({{ user.profile.get_role_display }})</p>
+<p><a href="{% url 'admin_dashboard:job_list' %}">Moderate job postings</a></p>
 
 <h2>Accounts by role</h2>
 <ul>

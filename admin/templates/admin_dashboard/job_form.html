@@ -1,0 +1,10 @@
+<h1>Edit posting (admin): {{ job.title }}</h1>
+<p>Posted by {{ job.posted_by.username|default:"unknown" }} on {{ job.posted_at|date:"M j, Y" }}</p>
+
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Save changes</button>
+</form>
+
+<p><a href="{% url 'admin_dashboard:job_list' %}">Back to postings</a></p>

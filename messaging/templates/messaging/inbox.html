@@ -1,0 +1,38 @@
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<h1>Messages</h1>
+
+{% if user.profile.is_recruiter %}
+  <p>To contact someone new, find them in <a href="{% url 'candidate_search' %}">Search candidates</a> or on an application, and click "Message".</p>
+{% endif %}
+
+<ul>
+  {% for t in threads %}
+    <li style="margin-bottom: 0.75rem;">
+      <a href="{% url 'messaging:conversation_detail' t.conversation.id %}">
+        <strong>{{ t.other.get_full_name|default:t.other.username }}</strong>
+      </a>
+      {% if t.unread_count %}<strong>({{ t.unread_count }} new)</strong>{% endif %}
+      {% if t.last_message %}
+        <br>
+        {% if t.last_message.sender == user %}You: {% endif %}{{ t.last_message.body|truncatechars:80 }}
+        · {{ t.last_message.sent_at|date:"M j, g:i a" }}
+      {% endif %}
+    </li>
+  {% empty %}
+    <li>
+      {% if user.profile.is_recruiter %}No conversations yet.{% else %}No messages yet. Recruiters can contact you here about opportunities.{% endif %}
+    </li>
+  {% endfor %}
+</ul>
+
+<p>
+  {% if user.profile.is_recruiter %}<a href="{% url 'recruiter_dashboard' %}">Recruiter dashboard</a> · {% endif %}
+  <a href="{% url 'home' %}">Home</a>
+</p>

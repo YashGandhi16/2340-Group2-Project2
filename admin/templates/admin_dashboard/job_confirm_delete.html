@@ -1,0 +1,18 @@
+<h1>Delete posting?</h1>
+
+<p>
+  You are about to permanently delete <strong>{{ job.title }}</strong> at {{ job.company }}
+  (posted by {{ job.posted_by.username|default:"unknown" }}).
+</p>
+{% if application_count %}
+  <p><strong>This also deletes {{ application_count }} application{{ application_count|pluralize }}</strong> from candidates. This cannot be undone.</p>
+  <p>To take it down but keep the applications, <a href="{% url 'admin_dashboard:job_list' %}">hide it</a> instead.</p>
+{% else %}
+  <p>This cannot be undone.</p>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  <button type="submit">Yes, delete permanently</button>
+  <a href="{% url 'admin_dashboard:job_list' %}">Cancel</a>
+</form>

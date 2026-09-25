@@ -14,6 +14,7 @@
     {% endif %}
     <strong>Member since:</strong> {{ candidate.date_joined|date:"M j, Y" }}
   </p>
+  <p><a href="{% url 'messaging:start_conversation' candidate.id %}">Message this candidate</a></p>
 
   {% if candidate_profile and not candidate_profile.is_empty %}
     {% if candidate_profile.headline %}

@@ -1,4 +1,10 @@
 <h1>{{ job.title }}</h1>
+{% if job.is_hidden %}
+  <p style="padding: 0.5rem; border: 2px solid #c33;">
+    <strong>Hidden by an administrator.</strong> Job seekers cannot see or apply to this posting.
+    {% if job.moderation_note %}<br>Reason: {{ job.moderation_note }}{% endif %}
+  </p>
+{% endif %}
 <p><strong>{{ job.company }}</strong>{% if job.location %} · {{ job.location }}{% endif %}</p>
 {% if job.closing_date %}
   <p>
@@ -23,6 +29,13 @@
   </ul>
 {% endif %}
 
+{% if user.is_superuser %}
+  <p>
+    <a href="{% url 'admin_dashboard:edit_job' job.id %}">Edit (admin)</a>
+    · <a href="{% url 'admin_dashboard:job_list' %}">Moderate postings</a>
+  </p>
+{% endif %}
+
 {% if is_recruiter %}
   <p>
     <a href="{% url 'application_list' %}?job={{ job.id }}">Review applicants ({{ application_count }})</a>
@@ -35,7 +48,7 @@
       Current status: <strong>{{ application_status }}</strong>.
       <a href="{% url 'my_applications' %}">Track all applications</a>
     </p>
-  {% elif not job.is_open %}
+  {% elif not job.accepts_applications %}
     <p>This posting is no longer accepting applications.</p>
   {% else %}
     <h2>Apply with one click</h2>

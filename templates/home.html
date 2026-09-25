@@ -2,6 +2,9 @@
 <p><a href="{% url 'job_list' %}">Browse jobs</a></p>
 {% if user.is_authenticated %}
   <p>
+    {% if user.profile.is_recruiter or user.profile.is_job_seeker %}
+      <a href="{% url 'messaging:inbox' %}">Messages{% if unread_message_count %} ({{ unread_message_count }} new){% endif %}</a> ·
+    {% endif %}
     {% if user.is_superuser %}
       <a href="{% url 'admin_dashboard:dashboard' %}">Admin dashboard</a>
     {% endif %}

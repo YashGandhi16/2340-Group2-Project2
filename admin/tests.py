@@ -4,13 +4,18 @@ RoleStateTests         - how a user's role and Django's superuser flag stay in s
 DashboardAccessTests   - who can open the dashboard and what it shows
 DashboardUpdateTests   - changing roles / active status from the dashboard
 LoginRedirectTests     - where each role lands right after logging in
+JobModerationTests     - admins listing, hiding/restoring, editing, and deleting job postings
 """
+
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import Role
+from jobs.models import Job, JobApplication
 
 User = get_user_model()
 
@@ -164,3 +169,159 @@ class LoginRedirectTests(TestCase):
             self.client.logout()
             response = self.login(username)
             self.assertEqual(response.redirect_chain[-1][0], url)
+
+
+class JobModerationTests(TestCase):
+    """Admins moderating, editing, and deleting any recruiter's job postings."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(username='boss', password='pass12345')
+        self.recruiter = User.objects.create_user(username='rec', password='pass12345')
+        self.recruiter.profile.role = Role.RECRUITER
+        self.recruiter.profile.save()
+        self.seeker = User.objects.create_user(username='seeker', password='pass12345')
+        self.job = Job.objects.create(
+            title='Data Analyst', company='Acme', location='Atlanta', description='Analyze.',
+            requirements='SQL', closing_date=timezone.localdate() + timedelta(days=10),
+            posted_by=self.recruiter,
+        )
+        self.application = JobApplication.objects.create(
+            job=self.job, applicant=self.seeker, note='Hire me.'
+        )
+        self.client.login(username='boss', password='pass12345')
+
+    def hide(self, reason='Spam posting'):
+        return self.client.post(
+            reverse('admin_dashboard:moderate_job', args=[self.job.pk]),
+            {'action': 'hide', 'reason': reason},
+        )
+
+    def test_admin_sees_all_postings(self):
+        """The moderation page lists postings from every recruiter."""
+        other = User.objects.create_user(username='rec2', password='pass12345')
+        other.profile.role = Role.RECRUITER
+        other.profile.save()
+        Job.objects.create(title='Other', company='B', description='d', posted_by=other)
+        response = self.client.get(reverse('admin_dashboard:job_list'))
+        self.assertEqual({j.title for j in response.context['jobs']}, {'Data Analyst', 'Other'})
+
+    def test_non_admins_blocked(self):
+        """Recruiters and Job Seekers cannot open any moderation page or action."""
+        urls = [
+            reverse('admin_dashboard:job_list'),
+            reverse('admin_dashboard:edit_job', args=[self.job.pk]),
+            reverse('admin_dashboard:delete_job', args=[self.job.pk]),
+        ]
+        for username in ('rec', 'seeker'):
+            self.client.login(username=username, password='pass12345')
+            for url in urls:
+                self.assertRedirects(self.client.get(url), reverse('home'))
+            self.hide()
+            self.client.post(reverse('admin_dashboard:delete_job', args=[self.job.pk]))
+        self.job.refresh_from_db()
+        self.assertFalse(self.job.is_hidden)
+
+    def test_hide_removes_from_search_and_blocks_applying(self):
+        """A hidden posting disappears from job search, its page 404s, and new applications are blocked."""
+        self.hide()
+        self.job.refresh_from_db()
+        self.assertTrue(self.job.is_hidden)
+        self.assertEqual(self.job.moderation_note, 'Spam posting')
+
+        newbie = User.objects.create_user(username='newbie', password='pass12345')
+        self.client.login(username='newbie', password='pass12345')
+        self.assertNotIn(self.job, self.client.get(reverse('job_list')).context['jobs'])
+        self.assertEqual(self.client.get(reverse('job_detail', args=[self.job.pk])).status_code, 404)
+        self.client.post(reverse('apply_to_job', args=[self.job.pk]), {'note': 'Please'})
+        self.assertFalse(JobApplication.objects.filter(applicant=newbie).exists())
+
+    def test_hide_keeps_existing_applications(self):
+        """Hiding does not delete applications that were already submitted."""
+        self.hide()
+        self.assertTrue(JobApplication.objects.filter(pk=self.application.pk).exists())
+
+    def test_recruiter_sees_hidden_reason(self):
+        """The posting's recruiter still sees it, marked hidden with the admin's reason."""
+        self.hide('Missing salary info')
+        self.client.login(username='rec', password='pass12345')
+        self.assertContains(self.client.get(reverse('recruiter_dashboard')), 'Missing salary info')
+        self.assertContains(
+            self.client.get(reverse('job_detail', args=[self.job.pk])), 'Hidden by an administrator'
+        )
+
+    def test_hide_requires_reason(self):
+        """Edge case: hiding without a reason is rejected and the posting stays visible."""
+        self.hide(reason='   ')
+        self.job.refresh_from_db()
+        self.assertFalse(self.job.is_hidden)
+
+    def test_restore_makes_posting_visible_again(self):
+        """Restoring a hidden posting puts it back in job search and clears the reason."""
+        self.hide()
+        self.client.post(
+            reverse('admin_dashboard:moderate_job', args=[self.job.pk]), {'action': 'restore'}
+        )
+        self.job.refresh_from_db()
+        self.assertFalse(self.job.is_hidden)
+        self.assertEqual(self.job.moderation_note, '')
+        self.assertContains(self.client.get(reverse('job_list')), 'Data Analyst')
+
+    def test_moderate_rejects_get(self):
+        """Edge case: the moderate URL only accepts POST (405 on GET)."""
+        url = reverse('admin_dashboard:moderate_job', args=[self.job.pk])
+        self.assertEqual(self.client.get(url).status_code, 405)
+
+    def test_filter_by_status(self):
+        """The status filter separates open, closed, and hidden postings."""
+        Job.objects.create(
+            title='Old role', company='B', description='d',
+            closing_date=timezone.localdate() - timedelta(days=1),
+        )
+        Job.objects.create(title='Removed role', company='C', description='d', is_hidden=True)
+        url = reverse('admin_dashboard:job_list')
+        titles = lambda status: [j.title for j in self.client.get(url, {'status': status}).context['jobs']]
+        self.assertEqual(titles('open'), ['Data Analyst'])
+        self.assertEqual(titles('closed'), ['Old role'])
+        self.assertEqual(titles('hidden'), ['Removed role'])
+
+    def test_admin_edits_any_posting(self):
+        """An admin can edit another recruiter's posting; the recruiter stays the owner."""
+        data = {
+            'company': 'Acme', 'title': 'Senior Data Analyst', 'location': 'Remote',
+            'description': 'Analyze.', 'requirements': 'SQL',
+            'closing_date': self.job.closing_date.isoformat(),
+        }
+        response = self.client.post(reverse('admin_dashboard:edit_job', args=[self.job.pk]), data)
+        self.assertRedirects(response, reverse('admin_dashboard:job_list'))
+        self.job.refresh_from_db()
+        self.assertEqual((self.job.title, self.job.location), ('Senior Data Analyst', 'Remote'))
+        self.assertEqual(self.job.posted_by, self.recruiter)
+
+    def test_admin_edit_validates_fields(self):
+        """Edge case: admin edits follow the same rules (no blank fields)."""
+        data = {'company': '', 'title': 'X', 'location': 'Y', 'description': 'Z',
+                'requirements': 'R', 'closing_date': self.job.closing_date.isoformat()}
+        response = self.client.post(reverse('admin_dashboard:edit_job', args=[self.job.pk]), data)
+        self.assertEqual(response.status_code, 200)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.company, 'Acme')
+
+    def test_delete_needs_confirmation(self):
+        """Opening delete shows a confirmation with the applications count; nothing is deleted yet."""
+        response = self.client.get(reverse('admin_dashboard:delete_job', args=[self.job.pk]))
+        self.assertContains(response, 'This also deletes 1 application')
+        self.assertTrue(Job.objects.filter(pk=self.job.pk).exists())
+
+    def test_confirmed_delete_removes_posting_and_applications(self):
+        """Confirming delete removes the posting and its applications."""
+        response = self.client.post(reverse('admin_dashboard:delete_job', args=[self.job.pk]))
+        self.assertRedirects(response, reverse('admin_dashboard:job_list'))
+        self.assertFalse(Job.objects.filter(pk=self.job.pk).exists())
+        self.assertFalse(JobApplication.objects.filter(pk=self.application.pk).exists())
+
+    def test_missing_posting_404(self):
+        """Edge case: acting on a posting id that does not exist returns 404."""
+        for name in ('edit_job', 'delete_job'):
+            self.assertEqual(
+                self.client.get(reverse(f'admin_dashboard:{name}', args=[9999])).status_code, 404
+            )

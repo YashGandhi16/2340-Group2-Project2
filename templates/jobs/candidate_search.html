@@ -21,6 +21,9 @@
   {% for candidate_profile in candidates %}
     <li>
       <h3>{{ candidate_profile.user.get_full_name|default:candidate_profile.user.username }}</h3>
+      {% if candidate_profile.user.profile.is_job_seeker %}
+        <p><a href="{% url 'messaging:start_conversation' candidate_profile.user.id %}">Message</a></p>
+      {% endif %}
       {% if candidate_profile.headline %}<p>{{ candidate_profile.headline }}</p>{% endif %}
       {% if candidate_profile.location %}<p><strong>Location:</strong> {{ candidate_profile.location }}</p>{% endif %}
       {% if candidate_profile.skill_list %}

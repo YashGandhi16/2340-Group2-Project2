@@ -14,6 +14,7 @@
   · <a href="{% url 'hiring_pipeline' %}">Hiring pipeline</a>
   · <a href="{% url 'application_list' %}">Review all applications</a>
   · <a href="{% url 'candidate_search' %}">Search candidates</a>
+  · <a href="{% url 'messaging:inbox' %}">Messages{% if unread_message_count %} ({{ unread_message_count }} new){% endif %}</a>
 </p>
 
 <h2>Your job postings</h2>
@@ -36,7 +37,11 @@
         <td>{{ job.company }}</td>
         <td>{{ job.location|default:"—" }}</td>
         <td>{{ job.closing_date|date:"M j, Y"|default:"—" }}</td>
-        <td>{% if job.is_open %}Open{% else %}Closed{% endif %}</td>
+        <td>
+          {% if job.is_hidden %}
+            <strong>Hidden by admin</strong>{% if job.moderation_note %}: {{ job.moderation_note }}{% endif %}
+          {% elif job.is_open %}Open{% else %}Closed{% endif %}
+        </td>
         <td><a href="{% url 'application_list' %}?job={{ job.id }}">{{ job.application_count }}</a></td>
         <td><a href="{% url 'edit_job' job.id %}">Edit</a></td>
       </tr>

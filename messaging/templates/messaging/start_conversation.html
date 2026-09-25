@@ -1,0 +1,11 @@
+<h1>Message {{ candidate.get_full_name|default:candidate.username }}</h1>
+{% if candidate.candidate_profile.headline %}<p><em>{{ candidate.candidate_profile.headline }}</em></p>{% endif %}
+<p>Your message is delivered inside the platform. Neither of you sees the other's email address.</p>
+
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Send message</button>
+</form>
+
+<p><a href="{% url 'candidate_search' %}">Back to candidate search</a> · <a href="{% url 'messaging:inbox' %}">Messages</a></p>

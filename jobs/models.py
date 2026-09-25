@@ -5,6 +5,10 @@ from django.utils import timezone
 
 
 class JobQuerySet(models.QuerySet):
+    def visible(self):
+        """Postings not taken down by an administrator."""
+        return self.filter(is_hidden=False)
+
     def open(self):
         """Postings that are still accepting applications (closing date today or later)."""
         today = timezone.localdate()
@@ -28,6 +32,10 @@ class Job(models.Model):
     # the posting form always requires it.
     closing_date = models.DateField(null=True)
     posted_at = models.DateTimeField(auto_now_add=True)
+    # Admin moderation: a hidden posting is removed from search and cannot be
+    # applied to, but it and its applications are kept.
+    is_hidden = models.BooleanField(default=False)
+    moderation_note = models.TextField(blank=True)
 
     objects = JobQuerySet.as_manager()
 
@@ -40,6 +48,10 @@ class Job(models.Model):
     @property
     def is_open(self):
         return self.closing_date is None or self.closing_date >= timezone.localdate()
+
+    @property
+    def accepts_applications(self):
+        return self.is_open and not self.is_hidden
 
 
 class ApplicationStatus(models.TextChoices):

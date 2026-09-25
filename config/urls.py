@@ -21,4 +21,5 @@ urlpatterns = [
     path('profile/', include('profiles.urls')),
     path('jobs/', include('jobs.urls')),
     path('dashboard/', include('admin.urls')),
+    path('messages/', include('messaging.urls')),
 ]

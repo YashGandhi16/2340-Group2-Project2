@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -13,7 +13,7 @@ from .models import ApplicationStatus, Job, JobApplication
 
 
 def job_list(request):
-    jobs = Job.objects.open()
+    jobs = Job.objects.visible().open()
 
     query = request.GET.get('q', '').strip()
     if query:
@@ -107,7 +107,7 @@ def apply_to_job(request, job_id):
     if request.method != 'POST':
         return redirect('job_detail', job_id=job.pk)
 
-    if not job.is_open:
+    if not job.accepts_applications:
         messages.error(request, 'This posting is closed and no longer accepts applications.')
         return redirect('job_detail', job_id=job.pk)
 
@@ -279,6 +279,9 @@ def update_pipeline_status(request, application_id):
 
 def job_detail(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
+    # Hidden postings are only visible to admins and the recruiter who posted them.
+    if job.is_hidden and not (request.user.is_superuser or job.posted_by_id == request.user.pk):
+        raise Http404
     profile = getattr(request.user, 'profile', None)
     is_job_seeker = (
         request.user.is_authenticated
