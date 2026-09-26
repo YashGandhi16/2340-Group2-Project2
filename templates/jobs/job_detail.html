@@ -1,69 +1,139 @@
-<h1>{{ job.title }}</h1>
+{% extends "base.html" %}
+
+{% block title %}{{ job.title }} at {{ job.company }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'job_list' %}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Back to jobs</a>
+
 {% if job.is_hidden %}
-  <p style="padding: 0.5rem; border: 2px solid #c33;">
-    <strong>Hidden by an administrator.</strong> Job seekers cannot see or apply to this posting.
-    {% if job.moderation_note %}<br>Reason: {{ job.moderation_note }}{% endif %}
-  </p>
-{% endif %}
-<p><strong>{{ job.company }}</strong>{% if job.location %} · {{ job.location }}{% endif %}</p>
-{% if job.closing_date %}
-  <p>
-    {% if job.is_open %}Applications close {{ job.closing_date|date:"M j, Y" }}
-    {% else %}<strong>Closed</strong> — applications closed {{ job.closing_date|date:"M j, Y" }}{% endif %}
-  </p>
+  <div class="alert alert-danger" role="status" style="margin-bottom:20px">
+    <svg class="icon" aria-hidden="true"><use href="#i-eye-off"/></svg>
+    <div>
+      <strong>Hidden by an administrator.</strong> Job seekers cannot see or apply to this posting.
+      {% if job.moderation_note %}<div style="margin-top:4px">Reason: {{ job.moderation_note }}</div>{% endif %}
+    </div>
+  </div>
 {% endif %}
 
-<h2>Job description</h2>
-{{ job.description|linebreaks }}
+<header class="card fade-up" style="margin-bottom:24px;overflow:hidden">
+  <div class="card-body" style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;background:linear-gradient(135deg,var(--blush-soft),var(--lavender-soft))">
+    <span class="company-mark company-mark-lg" data-name="{{ job.company }}" aria-hidden="true">{{ job.company|slice:":1"|upper }}</span>
+    <div class="grow">
+      <div class="row" style="margin-bottom:6px">{% include "partials/job_status_badge.html" %}</div>
+      <h1>{{ job.title }}</h1>
+      <ul class="meta-list" style="margin-top:10px">
+        <li><svg class="icon" aria-hidden="true"><use href="#i-building"/></svg><strong style="color:var(--ink)">{{ job.company }}</strong></li>
+        {% if job.location %}<li><svg class="icon" aria-hidden="true"><use href="#i-map-pin"/></svg>{{ job.location }}</li>{% endif %}
+        <li><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Posted {{ job.posted_at|date:"M j, Y" }}</li>
+      </ul>
+    </div>
+  </div>
+</header>
 
-{% if job.requirements %}
-  <h2>Applicant criteria</h2>
-  {{ job.requirements|linebreaks }}
-{% endif %}
+<div class="layout-2">
+  <article class="card fade-up-2">
+    <section class="card-body">
+      <h2 class="section-title">Job description</h2>
+      <div class="prose">{{ job.description|linebreaks }}</div>
+    </section>
+    {% if job.requirements %}
+      <section class="card-body" style="border-top:1px solid var(--border)">
+        <h2 class="section-title">Applicant criteria</h2>
+        <div class="prose">{{ job.requirements|linebreaks }}</div>
+      </section>
+    {% endif %}
+  </article>
 
-{% if messages %}
-  <ul>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
+  <aside class="stack sticky fade-up-3">
+    <div class="card">
+      <div class="card-body">
+        {% if is_owner %}
+          <h2 style="margin-bottom:4px">Manage this role</h2>
+          <p class="muted text-sm">See who applied and move them forward.</p>
+          <div class="stack" style="margin-top:16px">
+            <a class="btn btn-primary btn-block" href="{% url 'application_list' %}?job={{ job.id }}"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg>Review applicants ({{ application_count }})</a>
+            <a class="btn btn-block" href="{% url 'edit_job' job.id %}"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>Edit posting</a>
+          </div>
+        {% elif is_recruiter %}
+          <h2 style="margin-bottom:4px">Posted by another recruiter</h2>
+          <p class="muted text-sm">Only the recruiter who posted this role can see its applicants.</p>
+          <a class="btn btn-block" style="margin-top:16px" href="{% url 'recruiter_dashboard' %}">Go to your postings</a>
+        {% elif is_job_seeker %}
+          {% if already_applied %}
+            <div class="empty-art" style="width:52px;height:52px;border-radius:16px;margin:0 0 14px"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></div>
+            <h2 style="margin-bottom:4px">You have already applied to this job.</h2>
+            <p class="muted text-sm">Current status: <strong style="color:var(--ink)">{{ application_status }}</strong>.</p>
+            <a class="btn btn-block" style="margin-top:16px" href="{% url 'my_applications' %}">Track all applications <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+          {% elif not job.accepts_applications %}
+            <h2 style="margin-bottom:4px">Applications closed</h2>
+            <p class="muted text-sm">This posting is no longer accepting applications.</p>
+            <a class="btn btn-block" style="margin-top:16px" href="{% url 'job_list' %}">Find similar roles</a>
+          {% else %}
+            <h2 style="margin-bottom:4px">Apply with one click</h2>
+            <p class="muted text-sm">Add a short note about why you're a great fit. Your profile is shared automatically.</p>
+            <form method="post" action="{% url 'apply_to_job' job.id %}" class="form-grid" style="margin-top:16px">
+              {% csrf_token %}
+              <div class="field">
+                <label for="note">Tailored note<span class="req" aria-hidden="true">*</span></label>
+                <textarea id="note" name="note" rows="5" required
+                  placeholder="Mention why you are a strong fit for this role."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary btn-lg btn-block"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg>Apply now</button>
+            </form>
+          {% endif %}
+        {% elif user.is_superuser %}
+          <h2 style="margin-bottom:4px">Admin tools</h2>
+          <p class="muted text-sm">Only Job Seekers can apply to postings.</p>
+          <a class="btn btn-primary btn-block" style="margin-top:16px" href="{% url 'application_list' %}?job={{ job.id }}"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg>View applicants ({{ application_count }})</a>
+        {% elif user.is_authenticated %}
+          <h2 style="margin-bottom:4px">Want to apply?</h2>
+          <p class="muted text-sm">Only Job Seekers can apply. Switch your role or log in as a Job Seeker.</p>
+        {% else %}
+          <h2 style="margin-bottom:4px">Interested?</h2>
+          <p class="muted text-sm">Log in as a Job Seeker to apply. It takes one step.</p>
+          <div class="stack" style="margin-top:16px">
+            <a class="btn btn-primary btn-block" href="{% url 'login' %}?next={% url 'job_detail' job.id %}">Log in to apply</a>
+            <a class="btn btn-block" href="{% url 'signup' %}">Create an account</a>
+          </div>
+        {% endif %}
 
-{% if user.is_superuser %}
-  <p>
-    <a href="{% url 'admin_dashboard:edit_job' job.id %}">Edit (admin)</a>
-    · <a href="{% url 'admin_dashboard:job_list' %}">Moderate postings</a>
-  </p>
-{% endif %}
+        {% if user.is_superuser %}
+          <div class="stack" style="margin-top:16px">
+            <a class="btn btn-block" href="{% url 'admin_dashboard:edit_job' job.id %}"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>Edit (admin)</a>
+            <a class="btn btn-ghost btn-block" href="{% url 'admin_dashboard:job_list' %}"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Moderate postings</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
 
-{% if is_recruiter %}
-  <p>
-    <a href="{% url 'application_list' %}?job={{ job.id }}">Review applicants ({{ application_count }})</a>
-    {% if is_owner %}· <a href="{% url 'edit_job' job.id %}">Edit posting</a>{% endif %}
-  </p>
-{% elif is_job_seeker %}
-  {% if already_applied %}
-    <p>
-      You have already applied to this job.
-      Current status: <strong>{{ application_status }}</strong>.
-      <a href="{% url 'my_applications' %}">Track all applications</a>
-    </p>
-  {% elif not job.accepts_applications %}
-    <p>This posting is no longer accepting applications.</p>
-  {% else %}
-    <h2>Apply with one click</h2>
-    <form method="post" action="{% url 'apply_to_job' job.id %}">
-      {% csrf_token %}
-      <label for="note">Tailored note</label><br>
-      <textarea id="note" name="note" rows="4" cols="60" required
-        placeholder="Mention why you are a strong fit for this role."></textarea><br>
-      <button type="submit">Apply now</button>
-    </form>
-  {% endif %}
-{% elif user.is_authenticated %}
-  <p>Only Job Seekers can apply. Switch your role or log in as a Job Seeker.</p>
-{% else %}
-  <p><a href="{% url 'login' %}?next={% url 'job_detail' job.id %}">Log in</a> as a Job Seeker to apply.</p>
-{% endif %}
-
-<p><a href="{% url 'job_list' %}">Back to jobs</a> · <a href="{% url 'home' %}">Home</a></p>
+    <div class="card">
+      <div class="card-body">
+        <ul class="facts">
+          <li>
+            <span class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-building"/></svg></span>
+            <div><div class="fact-label">Company</div><div class="fact-value">{{ job.company }}</div></div>
+          </li>
+          {% if job.location %}
+            <li>
+              <span class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-map-pin"/></svg></span>
+              <div><div class="fact-label">Location</div><div class="fact-value">{{ job.location }}</div></div>
+            </li>
+          {% endif %}
+          {% if job.closing_date %}
+            <li>
+              <span class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg></span>
+              <div>
+                <div class="fact-label">Deadline</div>
+                <div class="fact-value">
+                  {% if job.is_open %}Applications close {{ job.closing_date|date:"M j, Y" }}
+                  {% else %}<strong>Closed</strong>: applications closed {{ job.closing_date|date:"M j, Y" }}{% endif %}
+                </div>
+              </div>
+            </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

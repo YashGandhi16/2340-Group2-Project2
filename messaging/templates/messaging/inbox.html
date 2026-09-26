@@ -1,38 +1,61 @@
-{% if messages %}
-  <ul>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
+{% extends "base.html" %}
 
-<h1>Messages</h1>
+{% block title %}Messages{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Inbox</p>
+    <h1>Messages</h1>
+    <p class="lede">Private conversations between recruiters and candidates. Email addresses are never shared.</p>
+  </div>
+  {% if user.profile.is_recruiter %}
+    <div class="page-actions">
+      <a class="btn btn-primary" href="{% url 'candidate_search' %}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>New conversation</a>
+    </div>
+  {% endif %}
+</header>
 
 {% if user.profile.is_recruiter %}
-  <p>To contact someone new, find them in <a href="{% url 'candidate_search' %}">Search candidates</a> or on an application, and click "Message".</p>
+  <div class="alert alert-info" style="margin-bottom:16px">
+    <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+    <div>To contact someone new, find them in <a href="{% url 'candidate_search' %}">Search candidates</a> or on an application, and click "Message".</div>
+  </div>
 {% endif %}
 
-<ul>
-  {% for t in threads %}
-    <li style="margin-bottom: 0.75rem;">
-      <a href="{% url 'messaging:conversation_detail' t.conversation.id %}">
-        <strong>{{ t.other.get_full_name|default:t.other.username }}</strong>
-      </a>
-      {% if t.unread_count %}<strong>({{ t.unread_count }} new)</strong>{% endif %}
-      {% if t.last_message %}
-        <br>
-        {% if t.last_message.sender == user %}You: {% endif %}{{ t.last_message.body|truncatechars:80 }}
-        · {{ t.last_message.sent_at|date:"M j, g:i a" }}
+<section class="card fade-up">
+  {% if threads %}
+    <ul class="list">
+      {% for t in threads %}
+        <li class="list-row{% if t.unread_count %} is-unread{% endif %}">
+          <span class="avatar avatar-round" data-name="{{ t.other.get_full_name|default:t.other.username }}" data-initials aria-hidden="true">{{ t.other.username|slice:":1" }}</span>
+          <div class="grow">
+            <a class="primary" href="{% url 'messaging:conversation_detail' t.conversation.id %}">{{ t.other.get_full_name|default:t.other.username }}{% if t.unread_count %}<span class="sr-only">, {{ t.unread_count }} unread</span>{% endif %}</a>
+            {% if t.last_message %}
+              <div class="secondary">{% if t.last_message.sender == user %}You: {% endif %}{{ t.last_message.body|truncatechars:80 }}</div>
+            {% endif %}
+          </div>
+          <div class="aside">
+            {% if t.last_message %}<span>{{ t.last_message.sent_at|date:"M j, g:i a" }}</span>{% endif %}
+            {% if t.unread_count %}<span class="unread-pill" aria-hidden="true">{{ t.unread_count }}</span>{% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty">
+      <div class="empty-art"><svg class="icon" aria-hidden="true"><use href="#i-inbox"/></svg></div>
+      {% if user.profile.is_recruiter %}
+        <h3>No conversations yet.</h3>
+        <p>Start one from a candidate's profile or an application.</p>
+        <a class="btn btn-primary" href="{% url 'candidate_search' %}">Find candidates</a>
+      {% else %}
+        <h3>No messages yet.</h3>
+        <p>Recruiters can contact you here about opportunities. A complete profile helps them find you.</p>
+        {% if user.profile.is_job_seeker %}<a class="btn" href="{% url 'profile' %}">Polish your profile</a>{% endif %}
       {% endif %}
-    </li>
-  {% empty %}
-    <li>
-      {% if user.profile.is_recruiter %}No conversations yet.{% else %}No messages yet. Recruiters can contact you here about opportunities.{% endif %}
-    </li>
-  {% endfor %}
-</ul>
-
-<p>
-  {% if user.profile.is_recruiter %}<a href="{% url 'recruiter_dashboard' %}">Recruiter dashboard</a> · {% endif %}
-  <a href="{% url 'home' %}">Home</a>
-</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

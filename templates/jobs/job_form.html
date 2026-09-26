@@ -1,9 +1,44 @@
-<h1>{% if job %}Edit posting: {{ job.title }}{% else %}Post a new job{% endif %}</h1>
+{% extends "base.html" %}
 
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">{% if job %}Save changes{% else %}Publish posting{% endif %}</button>
-</form>
+{% block title %}{% if job %}Edit posting{% else %}Post a new job{% endif %}{% endblock %}
 
-<p><a href="{% url 'recruiter_dashboard' %}">Back to dashboard</a></p>
+{% block content %}
+<a class="back-link" href="{% url 'recruiter_dashboard' %}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Back to dashboard</a>
+<header class="page-header">
+  <div>
+    <p class="eyebrow">{% if job %}Edit posting{% else %}New posting{% endif %}</p>
+    <h1>{% if job %}Edit posting: {{ job.title }}{% else %}Post a new job{% endif %}</h1>
+    <p class="lede">{% if job %}Changes go live on the job board as soon as you save.{% else %}Every field is required. Your posting goes live as soon as you publish it.{% endif %}</p>
+  </div>
+</header>
+
+<div class="layout-2">
+  <form method="post" class="card fade-up">
+    {% include "partials/job_form_fields.html" %}
+    <div class="form-actions">
+      <a class="btn btn-ghost" href="{% url 'recruiter_dashboard' %}">Cancel</a>
+      <button type="submit" class="btn btn-primary">{% if job %}Save changes{% else %}Publish posting{% endif %}</button>
+    </div>
+  </form>
+
+  <aside class="stack sticky fade-up-2">
+    {% if job.is_hidden %}
+      <div class="alert alert-danger">
+        <svg class="icon" aria-hidden="true"><use href="#i-eye-off"/></svg>
+        <div><strong>Hidden by an administrator</strong>{{ job.moderation_note|default:"No reason given." }}</div>
+      </div>
+    {% endif %}
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title-row"><svg class="icon" aria-hidden="true"><use href="#i-sparkles"/></svg><h2>Tips for a strong posting</h2></div>
+        <ul class="tip-list">
+          <li>Use a clear, searchable title, such as “Backend Engineer”.</li>
+          <li>Open the description with the impact of the role.</li>
+          <li>Keep criteria to true must-haves so good people still apply.</li>
+          <li>Say “Remote” or “Hybrid” in the location when it applies.</li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

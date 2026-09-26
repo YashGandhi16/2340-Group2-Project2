@@ -26,3 +26,12 @@ class CandidateProfileViewTests(TestCase):
 		self.assertEqual(profile.education, 'Computer Science degree')
 		self.assertEqual(profile.work_experience, 'Built web applications.')
 		self.assertEqual(profile.github_url, 'https://github.com/jobseeker')
+	def test_profile_saves_location_and_summary(self):
+		"""Location and summary are editable, since recruiters search on both."""
+		response = self.client.post(
+			reverse('profile'),
+			{'headline': 'Analyst', 'location': 'Remote', 'summary': 'Five years of SQL.'},
+		)
+		self.assertRedirects(response, reverse('profile'))
+		profile = CandidateProfile.objects.get(user=self.user)
+		self.assertEqual((profile.location, profile.summary), ('Remote', 'Five years of SQL.'))

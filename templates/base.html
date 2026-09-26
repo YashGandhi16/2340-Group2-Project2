@@ -1,0 +1,57 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Find work that fits{% endblock %} · Meridian</title>
+  <meta name="description" content="{% block meta_description %}Meridian connects job seekers and recruiters with a calm, focused hiring experience.{% endblock %}">
+  <meta name="theme-color" content="#413a5d">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23413a5d'/%3E%3Cpath d='M7 23c3-6 6-9 9-9s6 3 9 9' fill='none' stroke='%23eadcd9' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='8.5' r='2.2' fill='%23c7afa3'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  {% include "partials/sprite.html" %}
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  {% block body %}
+    {% if user.is_authenticated %}
+      <div class="app">
+        {% include "partials/sidebar.html" %}
+        <div class="scrim" data-sidebar-close aria-hidden="true"></div>
+        <div class="app-main">
+          {% include "partials/topbar.html" %}
+    {% else %}
+      <div class="public">
+        {% include "partials/public_header.html" %}
+    {% endif %}
+
+          <main id="main" class="page {% block page_class %}{% endblock %}" tabindex="-1">
+            {% block content %}{% endblock %}
+          </main>
+
+    {% if user.is_authenticated %}
+        </div>
+      </div>
+    {% else %}
+        {% include "partials/public_footer.html" %}
+      </div>
+    {% endif %}
+  {% endblock %}
+
+  {% include "partials/messages.html" %}
+  <script src="{% static 'js/app.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

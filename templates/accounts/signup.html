@@ -1,9 +1,25 @@
-<h1>Sign up</h1>
+{% extends "accounts/auth_base.html" %}
 
-<form method="post">
+{% block title %}Create your account{% endblock %}
+
+{% block art_quote %}
+  <h2>Your next role is <em>closer</em> than you think.</h2>
+  <p>Create a profile once. Apply anywhere on Meridian in a single step.</p>
+{% endblock %}
+
+{% block auth_content %}
+<h1>Create your account</h1>
+<p class="lede">Free for job seekers. Takes under a minute.</p>
+
+<form method="post" class="form-grid">
   {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Create account</button>
+  {% include "partials/non_field_errors.html" %}
+  {% for field in form %}
+    {% include "partials/field.html" %}
+  {% endfor %}
+  <button type="submit" class="btn btn-primary btn-lg btn-block">Create account</button>
+  <p class="text-xs muted" style="text-align:center;margin:0">New accounts start as Job Seekers. An administrator can grant recruiter access.</p>
 </form>
 
-<p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+<p class="auth-switch">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+{% endblock %}

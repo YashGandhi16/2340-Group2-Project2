@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="auth">
+  <aside class="auth-art" aria-hidden="true">
+    <a class="brand" href="{% url 'home' %}" tabindex="-1">
+      <span class="brand-mark"><svg class="icon"><use href="#i-logo"/></svg></span>
+      Meridian
+    </a>
+    <div class="auth-quote">
+      {% block art_quote %}
+        <h2>Hiring should feel <em>human</em> on both sides of the table.</h2>
+        <p>One place to discover roles, share your story and hear back.</p>
+      {% endblock %}
+    </div>
+    <div class="auth-floating">
+      <div class="row">
+        <span class="avatar avatar-sm avatar-round" data-tone="2">AR</span>
+        <div>
+          <div style="font-weight:600">Product Designer</div>
+          <div style="opacity:.7">Moved to Interview</div>
+        </div>
+      </div>
+      <div class="mini-bar"><span></span></div>
+    </div>
+    <ul class="auth-points">
+      <li><svg class="icon"><use href="#i-check-circle"/></svg>Apply to roles with one tailored note</li>
+      <li><svg class="icon"><use href="#i-check-circle"/></svg>Track every application stage by stage</li>
+      <li><svg class="icon"><use href="#i-check-circle"/></svg>Message recruiters without sharing your email</li>
+    </ul>
+  </aside>
+
+  <main id="main" class="auth-panel" tabindex="-1">
+    <div class="auth-card fade-up">
+      <a class="brand auth-mobile-brand" href="{% url 'home' %}">
+        <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-logo"/></svg></span>
+        Meridian
+      </a>
+      {% block auth_content %}{% endblock %}
+    </div>
+  </main>
+</div>
+{% endblock %}

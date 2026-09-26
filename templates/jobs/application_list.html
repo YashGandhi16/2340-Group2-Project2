@@ -1,32 +1,72 @@
-<h1>{% if job %}Applicants for {{ job.title }} at {{ job.company }}{% else %}Applications{% endif %}</h1>
+{% extends "base.html" %}
 
-{% if messages %}
-  <ul>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
+{% block title %}{% if job %}Applicants for {{ job.title }}{% else %}Applications{% endif %}{% endblock %}
 
+{% block content %}
 {% if job %}
-  <p><a href="{% url 'application_list' %}">Show applications for all jobs</a></p>
+  <a class="back-link" href="{% url 'job_detail' job.id %}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Back to job</a>
 {% endif %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Applications</p>
+    <h1>{% if job %}Applicants for {{ job.title }} at {{ job.company }}{% else %}Applications{% endif %}</h1>
+    <p class="lede">{% if job %}Everyone who applied to this role, newest first.{% elif user.is_superuser %}Every application on the platform, newest first.{% else %}Everyone who applied to the jobs you posted, newest first.{% endif %}</p>
+  </div>
+  <div class="page-actions">
+    {% if job %}<a class="btn" href="{% url 'application_list' %}">Show applications for all jobs</a>{% endif %}
+    {% if user.profile.is_recruiter %}<a class="btn btn-primary" href="{% url 'hiring_pipeline' %}{% if job %}?job={{ job.id }}{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-kanban"/></svg>Open in pipeline</a>{% endif %}
+  </div>
+</header>
 
-<ul>
-  {% for app in applications %}
-    <li>
-      <a href="{% url 'review_application' app.id %}">{{ app.applicant.get_full_name|default:app.applicant.username }}</a>
-      {% if app.applicant.candidate_profile.headline %}({{ app.applicant.candidate_profile.headline }}){% endif %}:
-      {{ app.job.title }} at {{ app.job.company }},
-      status <strong>{{ app.get_status_display }}</strong>,
-      applied {{ app.applied_at|date:"M j, Y" }}
-    </li>
-  {% empty %}
-    <li>No applications yet.</li>
-  {% endfor %}
-</ul>
-
-<p>
-  {% if job %}<a href="{% url 'job_detail' job.id %}">Back to job</a> · {% endif %}
-  <a href="{% url 'home' %}">Home</a>
-</p>
+<section class="card fade-up">
+  {% if applications %}
+    <div class="table-toolbar">
+      <span class="muted text-sm">{{ applications|length }} application{{ applications|length|pluralize }}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="table table--stack">
+        <thead>
+          <tr>
+            <th scope="col">Candidate</th>
+            <th scope="col">Role</th>
+            <th scope="col">Status</th>
+            <th scope="col">Applied</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for app in applications %}
+            <tr>
+              <td class="cell-main">
+                <div class="cell-person">
+                  <span class="avatar" data-name="{{ app.applicant.get_full_name|default:app.applicant.username }}" data-initials aria-hidden="true">{{ app.applicant.username|slice:":1" }}</span>
+                  <div class="who">
+                    <a class="row-link" href="{% url 'review_application' app.id %}">{{ app.applicant.get_full_name|default:app.applicant.username }}</a>
+                    {% if app.applicant.candidate_profile.headline %}<span>{{ app.applicant.candidate_profile.headline }}</span>{% endif %}
+                  </div>
+                </div>
+              </td>
+              <td data-label="Role">
+                <span class="primary-cell">{{ app.job.title }}</span>
+                <div class="text-xs muted">{{ app.job.company }}{% if user.is_superuser %} · posted by {{ app.job.posted_by.username|default:"unknown" }}{% endif %}</div>
+              </td>
+              <td data-label="Status">{% include "partials/status_badge.html" with status=app.status label=app.get_status_display %}</td>
+              <td data-label="Applied" class="nowrap">{{ app.applied_at|date:"M j, Y" }}</td>
+              <td class="actions">
+                <a class="btn btn-sm" href="{% url 'review_application' app.id %}">Review <svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg></a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <div class="empty-art"><svg class="icon" aria-hidden="true"><use href="#i-inbox"/></svg></div>
+      <h3>No applications yet.</h3>
+      <p>When candidates apply{% if job %} to this role{% endif %}, they'll show up here ready for review.</p>
+      {% if job %}<a class="btn" href="{% url 'job_detail' job.id %}">View posting</a>{% elif user.profile.is_recruiter %}<a class="btn btn-primary" href="{% url 'create_job' %}">Post a job</a>{% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

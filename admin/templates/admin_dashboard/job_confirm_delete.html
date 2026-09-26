@@ -1,18 +1,35 @@
-<h1>Delete posting?</h1>
+{% extends "base.html" %}
 
-<p>
-  You are about to permanently delete <strong>{{ job.title }}</strong> at {{ job.company }}
-  (posted by {{ job.posted_by.username|default:"unknown" }}).
-</p>
-{% if application_count %}
-  <p><strong>This also deletes {{ application_count }} application{{ application_count|pluralize }}</strong> from candidates. This cannot be undone.</p>
-  <p>To take it down but keep the applications, <a href="{% url 'admin_dashboard:job_list' %}">hide it</a> instead.</p>
-{% else %}
-  <p>This cannot be undone.</p>
-{% endif %}
+{% block title %}Delete posting?{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
 
-<form method="post">
-  {% csrf_token %}
-  <button type="submit">Yes, delete permanently</button>
-  <a href="{% url 'admin_dashboard:job_list' %}">Cancel</a>
-</form>
+{% block content %}
+<a class="back-link" href="{% url 'admin_dashboard:job_list' %}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Back to postings</a>
+
+<section class="card fade-up" style="max-width:560px;margin:24px auto 0">
+  <div class="modal-body" style="padding:32px">
+    <div class="modal-icon danger"><svg class="icon icon-lg" aria-hidden="true"><use href="#i-trash"/></svg></div>
+    <h1 style="font-size:1.6rem;margin-bottom:10px">Delete posting?</h1>
+    <p style="color:var(--ink-2)">
+      You are about to permanently delete <strong>{{ job.title }}</strong> at {{ job.company }}
+      (posted by {{ job.posted_by.username|default:"unknown" }}).
+    </p>
+    {% if application_count %}
+      <div class="alert alert-danger" style="margin-top:16px">
+        <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+        <div>
+          <strong>This also deletes {{ application_count }} application{{ application_count|pluralize }}</strong> from candidates. This cannot be undone.
+          <div style="margin-top:6px">To take it down but keep the applications, <a href="{% url 'admin_dashboard:job_list' %}">hide it</a> instead.</div>
+        </div>
+      </div>
+    {% else %}
+      <p class="muted">This cannot be undone.</p>
+    {% endif %}
+  </div>
+  <form method="post" class="modal-actions">
+    {% csrf_token %}
+    <a class="btn btn-ghost" href="{% url 'admin_dashboard:job_list' %}">Cancel</a>
+    <button type="submit" class="btn btn-danger"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>Yes, delete permanently</button>
+  </form>
+</section>
+{% endblock %}

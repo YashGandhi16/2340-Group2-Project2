@@ -1,27 +1,210 @@
-<h1>Job board</h1>
-<p><a href="{% url 'job_list' %}">Browse jobs</a></p>
-{% if user.is_authenticated %}
-  <p>
-    {% if user.profile.is_recruiter or user.profile.is_job_seeker %}
-      <a href="{% url 'messaging:inbox' %}">Messages{% if unread_message_count %} ({{ unread_message_count }} new){% endif %}</a> ·
+{% extends "base.html" %}
+
+{% block title %}{% if user.is_authenticated %}Overview{% else %}Find work that fits{% endif %}{% endblock %}
+
+{% block content %}
+{% if not user.is_authenticated %}
+
+  <section class="landing-hero fade-up">
+    <span class="pill-badge"><b>{{ open_job_count }}</b> open role{{ open_job_count|pluralize }} from {{ company_count }} compan{{ company_count|pluralize:"y,ies" }}</span>
+    <h1>Find work that <em>fits</em> the way you do.</h1>
+    <p class="lede">Meridian brings job seekers and recruiters into one calm, focused space: search roles, apply with a personal note, and follow every step of the process.</p>
+    <form class="searchbar" method="get" action="{% url 'job_list' %}" role="search" data-no-loading>
+      <div class="seg">
+        <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+        <label class="sr-only" for="hero-q">Keyword</label>
+        <input id="hero-q" type="search" name="q" placeholder="Role, company, or keyword">
+      </div>
+      <div class="seg">
+        <svg class="icon" aria-hidden="true"><use href="#i-map-pin"/></svg>
+        <label class="sr-only" for="hero-loc">Location</label>
+        <input id="hero-loc" type="search" name="location" placeholder="City or remote">
+      </div>
+      <button type="submit" class="btn btn-primary">Search jobs</button>
+    </form>
+    <div class="landing-proof">
+      <span><svg class="icon" aria-hidden="true"><use href="#i-check-circle"/></svg>Apply in one step</span>
+      <span><svg class="icon" aria-hidden="true"><use href="#i-check-circle"/></svg>Live status tracking</span>
+      <span><svg class="icon" aria-hidden="true"><use href="#i-check-circle"/></svg>Private recruiter messaging</span>
+    </div>
+  </section>
+
+  <section class="fade-up-2">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Fresh this week</p>
+        <h2>Recently posted roles</h2>
+      </div>
+      <a class="btn btn-ghost" href="{% url 'job_list' %}">View all jobs <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+    </div>
+    {% if recent_jobs %}
+      <div class="job-grid">
+        {% for job in recent_jobs %}{% include "partials/job_card.html" %}{% endfor %}
+      </div>
+    {% else %}
+      <div class="card empty">
+        <div class="empty-art"><svg class="icon" aria-hidden="true"><use href="#i-briefcase"/></svg></div>
+        <h3>New roles are on the way</h3>
+        <p>No jobs are posted yet. Create an account to be ready when they land.</p>
+        <a class="btn btn-primary" href="{% url 'signup' %}">Create an account</a>
+      </div>
     {% endif %}
-    {% if user.is_superuser %}
-      <a href="{% url 'admin_dashboard:dashboard' %}">Admin dashboard</a>
-    {% endif %}
-    {% if user.profile.is_recruiter %}
-      <a href="{% url 'recruiter_dashboard' %}">Recruiter dashboard</a>
-      · <a href="{% url 'create_job' %}">Post a job</a>
-    {% endif %}
-    {% if user.profile.is_job_seeker %}
-      <a href="{% url 'profile' %}">My profile</a>
-      · <a href="{% url 'my_applications' %}">My applications</a>
-    {% endif %}
-  </p>
-  {# Django 5 only accepts logout via POST, so this must be a form, not a link. #}
-  <form method="post" action="{% url 'logout' %}">
-    {% csrf_token %}
-    <button type="submit">Log out</button>
-  </form>
+  </section>
+
+  <section class="feature-grid fade-up-3" style="margin-top:56px" aria-label="Why Meridian">
+    <div class="feature">
+      <div class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-target"/></svg></div>
+      <h3>Search that respects your time</h3>
+      <p>Filter by keyword and location, then read every role on one clear page.</p>
+    </div>
+    <div class="feature">
+      <div class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg></div>
+      <h3>Know where you stand</h3>
+      <p>Each application moves through Applied, Review, Interview and Offer, and you can see every step.</p>
+    </div>
+    <div class="feature">
+      <div class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-kanban"/></svg></div>
+      <h3>Built for recruiters too</h3>
+      <p>Post roles, search candidates and run your hiring pipeline on a drag-and-drop board.</p>
+    </div>
+  </section>
+
+  <section class="cta-band">
+    <div>
+      <h2>Your next chapter starts here.</h2>
+      <p>Create a free profile in under a minute.</p>
+    </div>
+    <div class="row">
+      <a class="btn btn-ghost-light btn-lg" href="{% url 'login' %}">Log in</a>
+      <a class="btn btn-lg" href="{% url 'signup' %}">Get started <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+    </div>
+  </section>
+
 {% else %}
-  <p><a href="{% url 'login' %}">Log in</a> · <a href="{% url 'signup' %}">Sign up</a></p>
+
+  <section class="hero-band fade-up">
+    <p class="eyebrow">{% now "l, F j" %}</p>
+    <h1>Welcome back, {{ user.first_name|default:user.username }}.</h1>
+    {% if user.profile.is_job_seeker %}
+      <p class="lede">There {{ open_job_count|pluralize:"is,are" }} {{ open_job_count }} open role{{ open_job_count|pluralize }} right now. Pick up where you left off or find something new.</p>
+      <form class="searchbar" method="get" action="{% url 'job_list' %}" role="search" data-no-loading style="max-width:760px">
+        <div class="seg">
+          <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+          <label class="sr-only" for="home-q">Keyword</label>
+          <input id="home-q" type="search" name="q" placeholder="Role, company, or keyword">
+        </div>
+        <div class="seg">
+          <svg class="icon" aria-hidden="true"><use href="#i-map-pin"/></svg>
+          <label class="sr-only" for="home-loc">Location</label>
+          <input id="home-loc" type="search" name="location" placeholder="City or remote">
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+      </form>
+    {% elif user.profile.is_recruiter %}
+      <p class="lede">Your hiring workspace is ready. Review new applicants, move candidates through your pipeline, or publish a new role.</p>
+      <div class="row">
+        <a class="btn btn-primary" href="{% url 'recruiter_dashboard' %}"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>Open dashboard</a>
+        <a class="btn" href="{% url 'create_job' %}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Post a job</a>
+      </div>
+    {% elif user.is_superuser %}
+      <p class="lede">Keep the platform healthy: manage accounts and roles, and moderate job postings.</p>
+      <div class="row">
+        <a class="btn btn-primary" href="{% url 'admin_dashboard:dashboard' %}"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>Admin dashboard</a>
+        <a class="btn" href="{% url 'admin_dashboard:job_list' %}"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Moderate postings</a>
+      </div>
+    {% endif %}
+  </section>
+
+  {% if user.profile.is_job_seeker %}
+    <div class="stats fade-up-2" style="margin-top:24px">
+      <a class="stat stat--feature" href="{% url 'my_applications' %}">
+        <div class="stat-label"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Applications sent</div>
+        <div class="stat-value">{{ application_counts.total }}</div>
+        <div class="stat-meta">{{ application_counts.active }} still in progress</div>
+      </a>
+      <a class="stat" href="{% url 'my_applications' %}">
+        <div class="stat-label"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg>Interviews</div>
+        <div class="stat-value">{{ application_counts.interviews }}</div>
+        <div class="stat-meta">Currently at interview stage</div>
+      </a>
+      <a class="stat" href="{% url 'my_applications' %}">
+        <div class="stat-label"><svg class="icon" aria-hidden="true"><use href="#i-sparkles"/></svg>Offers</div>
+        <div class="stat-value">{{ application_counts.offers }}</div>
+        <div class="stat-meta">Extended to you</div>
+      </a>
+      <a class="stat" href="{% url 'messaging:inbox' %}">
+        <div class="stat-label"><svg class="icon" aria-hidden="true"><use href="#i-message"/></svg>Unread messages</div>
+        <div class="stat-value">{{ unread_message_count|default:0 }}</div>
+        <div class="stat-meta">From recruiters</div>
+      </a>
+    </div>
+
+    <div class="layout-2 fade-up-3">
+      <section>
+        <div class="section-head">
+          <h2 style="font-family:var(--font-sans);font-size:1.05rem;font-weight:650">Latest openings</h2>
+          <a class="btn btn-ghost btn-sm" href="{% url 'job_list' %}">Browse all <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+        </div>
+        {% if recent_jobs %}
+          <div class="job-grid">
+            {% for job in recent_jobs|slice:":4" %}{% include "partials/job_card.html" %}{% endfor %}
+          </div>
+        {% else %}
+          <div class="card empty empty-compact">
+            <div class="empty-art"><svg class="icon" aria-hidden="true"><use href="#i-briefcase"/></svg></div>
+            <h3>No open roles yet</h3>
+            <p>Check back soon. New postings appear here first.</p>
+          </div>
+        {% endif %}
+      </section>
+      <aside class="card">
+        <div class="card-header">
+          <h2>Recent applications</h2>
+          <a class="text-sm" href="{% url 'my_applications' %}">View all</a>
+        </div>
+        {% if recent_applications %}
+          <ul class="list">
+            {% for app in recent_applications %}
+              <li class="list-row">
+                <span class="company-mark" style="width:38px;height:38px;border-radius:11px;font-size:1rem" data-name="{{ app.job.company }}" aria-hidden="true">{{ app.job.company|slice:":1"|upper }}</span>
+                <div class="grow">
+                  <a class="primary" href="{% url 'job_detail' app.job.id %}">{{ app.job.title }}</a>
+                  <div class="secondary">{{ app.job.company }}</div>
+                </div>
+                {% include "partials/status_badge.html" with status=app.status label=app.get_status_display %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="empty empty-compact">
+            <p>You haven't applied anywhere yet. When you do, progress shows up here.</p>
+          </div>
+        {% endif %}
+        <div class="card-footer">
+          <a class="row text-sm" style="gap:8px;text-decoration:none" href="{% url 'profile' %}"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>A complete profile helps recruiters find you. <strong>Edit profile</strong></a>
+        </div>
+      </aside>
+    </div>
+
+  {% else %}
+    <section class="fade-up-2" style="margin-top:32px">
+      <div class="section-head">
+        <h2 style="font-family:var(--font-sans);font-size:1.05rem;font-weight:650">Latest on the job board</h2>
+        <a class="btn btn-ghost btn-sm" href="{% url 'job_list' %}">View job board <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+      </div>
+      {% if recent_jobs %}
+        <div class="job-grid">
+          {% for job in recent_jobs %}{% include "partials/job_card.html" %}{% endfor %}
+        </div>
+      {% else %}
+        <div class="card empty empty-compact">
+          <div class="empty-art"><svg class="icon" aria-hidden="true"><use href="#i-briefcase"/></svg></div>
+          <h3>No open roles yet</h3>
+          <p>Published postings appear here.</p>
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+
 {% endif %}
+{% endblock %}

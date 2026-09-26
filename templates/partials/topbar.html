@@ -1,0 +1,16 @@
+<header class="topbar">
+  <button type="button" class="btn btn-ghost btn-icon" data-sidebar-open aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">
+    <svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg>
+  </button>
+  <a class="brand" href="{% url 'home' %}">
+    <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-logo"/></svg></span>
+    Meridian
+  </a>
+  <span class="spacer"></span>
+  {% if user.profile.is_recruiter or user.profile.is_job_seeker %}
+    <a class="btn btn-ghost btn-icon topbar-badge" href="{% url 'messaging:inbox' %}" aria-label="Open messages">
+      <svg class="icon" aria-hidden="true"><use href="#i-message"/></svg>
+      {% if unread_message_count %}<span class="dot" aria-hidden="true"></span>{% endif %}
+    </a>
+  {% endif %}
+</header>

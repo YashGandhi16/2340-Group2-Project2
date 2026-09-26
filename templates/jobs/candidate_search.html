@@ -1,48 +1,102 @@
-<h1>Search candidates</h1>
+{% extends "base.html" %}
 
-<form method="get">
-  <p>
-    <label for="id_skills">Skills</label>
-    <input id="id_skills" type="search" name="skills" value="{{ skills }}">
-  </p>
-  <p>
-    <label for="id_location">Location</label>
-    <input id="id_location" type="search" name="location" value="{{ location }}">
-  </p>
-  <p>
-    <label for="id_projects">Projects or experience</label>
-    <input id="id_projects" type="search" name="projects" value="{{ projects }}">
-  </p>
-  <button type="submit">Search</button>
-</form>
+{% block title %}Search candidates{% endblock %}
 
-<h2>Candidates</h2>
-<ul>
-  {% for candidate_profile in candidates %}
-    <li>
-      <h3>{{ candidate_profile.user.get_full_name|default:candidate_profile.user.username }}</h3>
-      {% if candidate_profile.user.profile.is_job_seeker %}
-        <p><a href="{% url 'messaging:start_conversation' candidate_profile.user.id %}">Message</a></p>
-      {% endif %}
-      {% if candidate_profile.headline %}<p>{{ candidate_profile.headline }}</p>{% endif %}
-      {% if candidate_profile.location %}<p><strong>Location:</strong> {{ candidate_profile.location }}</p>{% endif %}
-      {% if candidate_profile.skill_list %}
-        <p><strong>Skills:</strong> {{ candidate_profile.skill_list|join:', ' }}</p>
-      {% endif %}
-      {% if candidate_profile.work_experience %}
-        <p><strong>Experience:</strong> {{ candidate_profile.work_experience|truncatewords:30 }}</p>
-      {% endif %}
-      {% if candidate_profile.links %}
-        <p>
-          {% for label, url in candidate_profile.links %}
-            <a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ label }}</a>{% if not forloop.last %} · {% endif %}
-          {% endfor %}
-        </p>
-      {% endif %}
-    </li>
-  {% empty %}
-    <li>No candidates match those filters.</li>
-  {% endfor %}
-</ul>
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Talent</p>
+    <h1>Search candidates</h1>
+    <p class="lede">Find job seekers by what they know, where they are, and what they've built.</p>
+  </div>
+</header>
 
-<p><a href="{% url 'recruiter_dashboard' %}">Back to dashboard</a></p>
+<div class="layout-2 layout-2--left">
+  <aside class="card sticky fade-up">
+    <form method="get" data-no-loading>
+      <div class="card-header">
+        <h2 class="row" style="gap:8px"><svg class="icon" aria-hidden="true"><use href="#i-filter"/></svg>Filters</h2>
+        {% if skills or location or projects %}<a class="text-sm" href="{% url 'candidate_search' %}">Reset</a>{% endif %}
+      </div>
+      <div class="card-body form-grid">
+        <div class="field">
+          <label for="id_skills">Skills</label>
+          <div class="input-icon">
+            <svg class="icon" aria-hidden="true"><use href="#i-sparkles"/></svg>
+            <input id="id_skills" type="search" name="skills" value="{{ skills }}" placeholder="e.g. Python">
+          </div>
+        </div>
+        <div class="field">
+          <label for="id_location">Location</label>
+          <div class="input-icon">
+            <svg class="icon" aria-hidden="true"><use href="#i-map-pin"/></svg>
+            <input id="id_location" type="search" name="location" value="{{ location }}" placeholder="e.g. Atlanta">
+          </div>
+        </div>
+        <div class="field">
+          <label for="id_projects">Projects or experience</label>
+          <div class="input-icon">
+            <svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>
+            <input id="id_projects" type="search" name="projects" value="{{ projects }}" placeholder="e.g. machine learning">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Search</button>
+      </div>
+    </form>
+  </aside>
+
+  <section aria-labelledby="results-heading">
+    <div class="results-head" style="margin-top:0">
+      <h2 id="results-heading">Candidates <span class="muted" style="font-weight:500">· {{ candidates|length }} found</span></h2>
+    </div>
+    {% if candidates %}
+      <div class="candidate-grid fade-up-2">
+        {% for candidate_profile in candidates %}
+          <article class="card candidate-card">
+            <div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:14px">
+              <span class="avatar" data-name="{{ candidate_profile.user.get_full_name|default:candidate_profile.user.username }}" data-initials aria-hidden="true">{{ candidate_profile.user.username|slice:":1" }}</span>
+              <div class="grow">
+                <h3>{{ candidate_profile.user.get_full_name|default:candidate_profile.user.username }}</h3>
+                {% if candidate_profile.headline %}<p class="headline">{{ candidate_profile.headline }}</p>{% endif %}
+                {% if candidate_profile.location %}
+                  <ul class="meta-list" style="margin-top:4px"><li><svg class="icon" aria-hidden="true"><use href="#i-map-pin"/></svg>{{ candidate_profile.location }}</li></ul>
+                {% endif %}
+              </div>
+            </div>
+            {% if candidate_profile.skill_list %}
+              <ul class="chips" aria-label="Skills">
+                {% for skill in candidate_profile.skill_list|slice:":6" %}<li>{{ skill }}</li>{% endfor %}
+                {% if candidate_profile.skill_list|length > 6 %}<li class="chip-more">+{{ candidate_profile.skill_list|length|add:"-6" }} more</li>{% endif %}
+              </ul>
+            {% endif %}
+            {% if candidate_profile.work_experience %}
+              <p class="excerpt"><strong style="color:var(--ink-2)">Experience:</strong> {{ candidate_profile.work_experience|truncatewords:30 }}</p>
+            {% endif %}
+            <div class="card-foot">
+              {% if candidate_profile.links %}
+                <ul class="link-list">
+                  {% for label, url in candidate_profile.links %}
+                    <li><a href="{{ url }}" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg>{{ label }}<span class="sr-only"> (opens in new tab)</span></a></li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <span class="text-xs muted">No links shared</span>
+              {% endif %}
+              {% if candidate_profile.user.profile.is_job_seeker %}
+                <a class="btn btn-soft btn-sm" href="{% url 'messaging:start_conversation' candidate_profile.user.id %}"><svg class="icon" aria-hidden="true"><use href="#i-message"/></svg>Message</a>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card empty">
+        <div class="empty-art"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg></div>
+        <h3>No candidates match those filters.</h3>
+        <p>Try fewer filters or a broader skill, such as “Java” instead of “Java Spring Boot”.</p>
+        {% if skills or location or projects %}<a class="btn" href="{% url 'candidate_search' %}">Clear filters</a>{% endif %}
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

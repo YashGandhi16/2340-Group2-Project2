@@ -1,13 +1,42 @@
-<h1>Log in</h1>
+{% extends "accounts/auth_base.html" %}
 
-{% if form.errors %}
-  <p>Invalid username or password.</p>
-{% endif %}
+{% block title %}Log in{% endblock %}
 
-<form method="post">
+{% block auth_content %}
+<h1>Welcome back</h1>
+<p class="lede">Log in to pick up where you left off.</p>
+
+<form method="post" class="form-grid">
   {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Log in</button>
+  {% if form.errors %}
+    <div class="alert alert-danger" role="alert">
+      <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+      <div><strong>Invalid username or password.</strong>Check your details and try again. Both fields are case-sensitive.</div>
+    </div>
+  {% endif %}
+  {% if next and not form.errors %}
+    <div class="alert alert-info">
+      <svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>
+      <div>Please log in to continue.</div>
+    </div>
+  {% endif %}
+  <div class="field">
+    <label for="{{ form.username.id_for_label }}">Username</label>
+    <div class="input-icon">
+      <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
+      {{ form.username }}
+    </div>
+  </div>
+  <div class="field">
+    <label for="{{ form.password.id_for_label }}">Password</label>
+    <div class="input-icon">
+      <svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>
+      {{ form.password }}
+    </div>
+  </div>
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  <button type="submit" class="btn btn-primary btn-lg btn-block">Log in</button>
 </form>
 
-<p>Don't have an account? <a href="{% url 'signup' %}">Sign up</a></p>
+<p class="auth-switch">Don't have an account? <a href="{% url 'signup' %}">Sign up</a></p>
+{% endblock %}

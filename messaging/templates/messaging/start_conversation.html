@@ -1,11 +1,33 @@
-<h1>Message {{ candidate.get_full_name|default:candidate.username }}</h1>
-{% if candidate.candidate_profile.headline %}<p><em>{{ candidate.candidate_profile.headline }}</em></p>{% endif %}
-<p>Your message is delivered inside the platform. Neither of you sees the other's email address.</p>
+{% extends "base.html" %}
 
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Send message</button>
-</form>
+{% block title %}Message {{ candidate.get_full_name|default:candidate.username }}{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
 
-<p><a href="{% url 'candidate_search' %}">Back to candidate search</a> · <a href="{% url 'messaging:inbox' %}">Messages</a></p>
+{% block content %}
+<a class="back-link" href="{% url 'candidate_search' %}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Back to candidate search</a>
+
+<section class="card fade-up">
+  <div class="card-body" style="display:flex;gap:16px;align-items:center;background:linear-gradient(135deg,var(--blush-soft),var(--lavender-soft));border-radius:var(--r-lg) var(--r-lg) 0 0">
+    <span class="avatar avatar-lg" data-name="{{ candidate.get_full_name|default:candidate.username }}" data-initials aria-hidden="true">{{ candidate.username|slice:":1" }}</span>
+    <div>
+      <p class="eyebrow" style="margin-bottom:2px">New conversation</p>
+      <h1 style="font-size:1.6rem">Message {{ candidate.get_full_name|default:candidate.username }}</h1>
+      {% if candidate.candidate_profile.headline %}<p class="muted" style="margin:2px 0 0"><em>{{ candidate.candidate_profile.headline }}</em></p>{% endif %}
+    </div>
+  </div>
+  <form method="post" data-composer>
+    {% csrf_token %}
+    <div class="card-body form-grid">
+      <div class="alert alert-info">
+        <svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>
+        <div>Your message is delivered inside the platform. Neither of you sees the other's email address.</div>
+      </div>
+      {% include "partials/field.html" with field=form.body %}
+    </div>
+    <div class="form-actions">
+      <a class="btn btn-ghost" href="{% url 'messaging:inbox' %}">Messages</a>
+      <button type="submit" class="btn btn-primary"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg>Send message</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from accounts.models import Role
-from accounts.views import job_seeker_required, recruiter_required
+from accounts.views import job_seeker_required, recruiter_or_admin_required, recruiter_required
 from profiles.models import CandidateProfile
 
 from .forms import JobPostingForm
@@ -35,6 +35,23 @@ def job_list(request):
     )
 
 
+def _status_breakdown(applications):
+    """[{value, label, count, pct}] for each hiring stage, in pipeline order."""
+    counts = dict(
+        applications.order_by().values_list('status').annotate(n=Count('pk'))
+    )
+    total = sum(counts.values())
+    return [
+        {
+            'value': value,
+            'label': label,
+            'count': counts.get(value, 0),
+            'pct': round(counts.get(value, 0) * 100 / total) if total else 0,
+        }
+        for value, label in ApplicationStatus.choices
+    ]
+
+
 @recruiter_required
 def recruiter_dashboard(request):
     postings = (
@@ -42,7 +59,24 @@ def recruiter_dashboard(request):
         .annotate(application_count=Count('applications'))
         .order_by('-posted_at')
     )
-    return render(request, 'jobs/recruiter_dashboard.html', {'postings': postings})
+    applications = JobApplication.objects.filter(job__posted_by=request.user)
+    status_breakdown = _status_breakdown(applications)
+    stage_counts = {row['value']: row['count'] for row in status_breakdown}
+    return render(
+        request,
+        'jobs/recruiter_dashboard.html',
+        {
+            'postings': postings,
+            'status_breakdown': status_breakdown,
+            'total_applicants': sum(stage_counts.values()),
+            'new_applicants': stage_counts[ApplicationStatus.APPLIED],
+            'interviewing': stage_counts[ApplicationStatus.INTERVIEW],
+            'open_posting_count': sum(1 for job in postings if job.accepts_applications),
+            'recent_applications': applications.select_related(
+                'job', 'applicant', 'applicant__candidate_profile'
+            ).order_by('-applied_at')[:5],
+        },
+    )
 
 
 
@@ -139,20 +173,31 @@ def my_applications(request):
         .select_related('job')
         .order_by('-applied_at')
     )
+    # Position of each application's stage, so the stepper can mark earlier stages done.
+    for app in applications:
+        app.stage_index = ApplicationStatus.values.index(app.status)
     return render(
         request,
         'jobs/my_applications.html',
         {
             'applications': applications,
             'status_pipeline': ApplicationStatus.choices,
+            'status_breakdown': _status_breakdown(applications),
         },
     )
 
 
-@recruiter_required
+def _visible_jobs(user):
+    """Admins see every posting's applications; recruiters only their own postings'."""
+    return Job.objects.all() if user.is_superuser else Job.objects.filter(posted_by=user)
+
+
+@recruiter_or_admin_required
 def application_list(request):
-    applications = JobApplication.objects.select_related(
+    visible_jobs = _visible_jobs(request.user)
+    applications = JobApplication.objects.filter(job__in=visible_jobs).select_related(
         'job',
+        'job__posted_by',
         'applicant',
         'applicant__candidate_profile',
     ).order_by('-applied_at')
@@ -160,7 +205,7 @@ def application_list(request):
     job = None
     job_id = request.GET.get('job')
     if job_id and job_id.isdigit():
-        job = get_object_or_404(Job, pk=job_id)
+        job = get_object_or_404(visible_jobs, pk=job_id)
         applications = applications.filter(job=job)
 
     return render(
@@ -170,7 +215,7 @@ def application_list(request):
     )
 
 
-@recruiter_required
+@recruiter_or_admin_required
 def review_application(request, application_id):
     application = get_object_or_404(
         JobApplication.objects.select_related(
@@ -179,8 +224,14 @@ def review_application(request, application_id):
             'applicant__candidate_profile',
         ),
         pk=application_id,
-        job__posted_by=request.user,
+        job__in=_visible_jobs(request.user),
     )
+    # Admins can view any application, but only the posting's recruiter moves it through hiring.
+    can_update_status = application.job.posted_by_id == request.user.pk
+
+    if request.method == 'POST' and not can_update_status:
+        messages.error(request, "Only the posting's recruiter can change the application status.")
+        return redirect('review_application', application_id=application.pk)
 
     if request.method == 'POST':
         new_status = request.POST.get('status')
@@ -197,7 +248,7 @@ def review_application(request, application_id):
     candidate = application.applicant
     candidate_profile = getattr(candidate, 'candidate_profile', None)
     other_applications = (
-        candidate.job_applications.filter(job__posted_by=request.user)
+        candidate.job_applications.filter(job__in=_visible_jobs(request.user))
         .exclude(pk=application.pk)
         .select_related('job')
     )
@@ -210,6 +261,7 @@ def review_application(request, application_id):
             'candidate_profile': candidate_profile,
             'other_applications': other_applications,
             'statuses': ApplicationStatus.choices,
+            'can_update_status': can_update_status,
         },
     )
 
@@ -293,6 +345,8 @@ def job_detail(request, job_id):
         and profile is not None
         and profile.role == Role.RECRUITER
     )
+    is_owner = is_recruiter and job.posted_by_id == request.user.pk
+    can_review_applicants = is_owner or request.user.is_superuser
     already_applied = False
     application_status = None
     if request.user.is_authenticated:
@@ -311,8 +365,9 @@ def job_detail(request, job_id):
             'job': job,
             'is_job_seeker': is_job_seeker,
             'is_recruiter': is_recruiter,
-            'application_count': job.applications.count() if is_recruiter else None,
-            'is_owner': is_recruiter and job.posted_by_id == request.user.pk,
+            'application_count': job.applications.count() if can_review_applicants else None,
+            'is_owner': is_owner,
+            'can_review_applicants': can_review_applicants,
             'already_applied': already_applied,
             'application_status': application_status,
         },

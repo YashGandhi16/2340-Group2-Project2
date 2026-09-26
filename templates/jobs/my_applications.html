@@ -1,44 +1,74 @@
-<h1>My applications</h1>
+{% extends "base.html" %}
 
-<p>Track where each application stands: Applied → Review → Interview → Offer → Closed.</p>
+{% block title %}My applications{% endblock %}
 
-{% if messages %}
-  <ul>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Your search</p>
+    <h1>My applications</h1>
+    <p class="lede">Track where each application stands: Applied → Review → Interview → Offer → Closed.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="{% url 'job_list' %}"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Browse jobs</a>
+  </div>
+</header>
 
-{% for app in applications %}
-  <section style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #ccc;">
-    <h2>
-      <a href="{% url 'job_detail' app.job.id %}">{{ app.job.title }}</a>
-      at {{ app.job.company }}
-    </h2>
-    <p>
-      Applied {{ app.applied_at|date:"M j, Y" }}
-      · Current status: <strong>{{ app.get_status_display }}</strong>
-    </p>
-    <p aria-label="Application status pipeline">
-      {% for value, label in status_pipeline %}
-        {% if value == app.status %}
-          <strong>[{{ label }}]</strong>
-        {% else %}
-          {{ label }}
-        {% endif %}
-        {% if not forloop.last %} → {% endif %}
-      {% endfor %}
-    </p>
-    {% if app.note %}
-      <p><em>Your note:</em> {{ app.note|truncatewords:30 }}</p>
-    {% endif %}
+{% if applications %}
+  <section class="card fade-up" style="margin-bottom:24px">
+    <div class="card-body">
+      <div class="row-between" style="margin-bottom:14px">
+        <h2>Where things stand</h2>
+        <span class="muted text-sm">{{ applications|length }} application{{ applications|length|pluralize }}</span>
+      </div>
+      <div class="dist-bar" role="img" aria-label="Applications by stage: {% for row in status_breakdown %}{{ row.label }} {{ row.count }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+        {% for row in status_breakdown %}{% if row.count %}<span class="dist-seg seg-{{ row.value }}" style="flex:{{ row.count }}" data-tip="{{ row.label }}: {{ row.count }}" tabindex="0"></span>{% endif %}{% endfor %}
+      </div>
+      <ul class="dist-legend dist-legend--inline">
+        {% for row in status_breakdown %}
+          <li class="seg-{{ row.value }}"><span class="swatch"></span>{{ row.label }}<span class="val">{{ row.count }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
   </section>
-{% empty %}
-  <p>You have not applied to any jobs yet. <a href="{% url 'job_list' %}">Browse jobs</a>.</p>
-{% endfor %}
 
-<p>
-  <a href="{% url 'job_list' %}">Browse jobs</a>
-  · <a href="{% url 'home' %}">Home</a>
-</p>
+  <section class="card fade-up-2" aria-label="Applications">
+    {% for app in applications %}
+      <article class="app-card">
+        <div class="app-card-head">
+          <span class="company-mark" data-name="{{ app.job.company }}" aria-hidden="true">{{ app.job.company|slice:":1"|upper }}</span>
+          <div class="grow">
+            <h3><a href="{% url 'job_detail' app.job.id %}">{{ app.job.title }}</a></h3>
+            <ul class="meta-list" style="margin-top:4px">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-building"/></svg>{{ app.job.company }}</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>Applied {{ app.applied_at|date:"M j, Y" }}</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Updated {{ app.status_updated_at|date:"M j" }}</li>
+            </ul>
+          </div>
+          <div><span class="sr-only">Current status:</span>{% include "partials/status_badge.html" with status=app.status label=app.get_status_display %}</div>
+        </div>
+
+        <ol class="stepper{% if app.status == 'CLOSED' %} is-closed{% endif %}" aria-label="Application status pipeline">
+          {% for value, label in status_pipeline %}
+            <li class="seg-{{ value }} {% if forloop.counter0 < app.stage_index %}is-done{% elif value == app.status %}is-current{% endif %}"{% if value == app.status %} aria-current="step"{% endif %}>
+              <span class="dot">{% if forloop.counter0 < app.stage_index %}<svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>{% endif %}</span>
+              {{ label }}
+            </li>
+          {% endfor %}
+        </ol>
+
+        {% if app.note %}
+          <div class="app-note"><em>Your note</em>{{ app.note|truncatewords:30 }}</div>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </section>
+{% else %}
+  <div class="card empty fade-up">
+    <div class="empty-art"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg></div>
+    <h3>You have not applied to any jobs yet.</h3>
+    <p>When you apply, each application appears here with a live view of its progress.</p>
+    <a class="btn btn-primary" href="{% url 'job_list' %}">Browse jobs</a>
+  </div>
+{% endif %}
+{% endblock %}

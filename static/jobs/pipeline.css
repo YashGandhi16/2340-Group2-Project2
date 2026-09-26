@@ -1,77 +1,4 @@
-:root {
-  --bg: #f4f4f5;
-  --surface: #ffffff;
-  --surface-muted: #ececee;
-  --border: #d4d4d8;
-  --text: #18181b;
-  --text-muted: #71717a;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.04);
-  --radius: 12px;
-  --accent: #3f3f46;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body.pipeline-page {
-  margin: 0;
-  min-height: 100vh;
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  color: var(--text);
-  background:
-    radial-gradient(circle at top left, #fafafa 0%, transparent 40%),
-    linear-gradient(180deg, #fafafa 0%, var(--bg) 100%);
-}
-
-.pipeline-shell {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 28px 24px 48px;
-}
-
-.pipeline-topbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.pipeline-topbar h1 {
-  margin: 0 0 6px;
-  font-size: 1.75rem;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-}
-
-.pipeline-topbar p {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 0.95rem;
-}
-
-.pipeline-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-.pipeline-nav a {
-  color: var(--text);
-  text-decoration: none;
-  font-size: 0.9rem;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-}
-
-.pipeline-nav a:hover {
-  background: var(--surface-muted);
-}
+/* Hiring pipeline (Kanban). Relies on tokens from css/app.css. */
 
 .pipeline-filters {
   display: flex;
@@ -79,28 +6,25 @@ body.pipeline-page {
   gap: 12px;
   align-items: center;
   margin-bottom: 20px;
-  padding: 14px 16px;
+  padding: 12px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .pipeline-filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.85rem;
-  color: var(--text-muted);
   font-weight: 600;
+  color: var(--ink-2);
 }
 
-.pipeline-filters select {
-  min-width: 240px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fafafa;
-  color: var(--text);
-  font: inherit;
-}
+.pipeline-filters label .icon { color: var(--accent); }
+
+.pipeline-filters select { width: auto; min-width: 260px; max-width: 100%; }
 
 .pipeline-board {
   display: grid;
@@ -108,22 +32,35 @@ body.pipeline-page {
   gap: 14px;
   align-items: start;
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: 12px;
+  scroll-snap-type: x proximity;
 }
 
 .pipeline-column {
-  background: var(--surface-muted);
+  background: var(--surface-sunken);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  min-height: 420px;
+  border-radius: var(--r-lg);
+  min-height: 460px;
   display: flex;
   flex-direction: column;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  scroll-snap-align: start;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+  position: relative;
+  overflow: hidden;
+}
+
+.pipeline-column::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--seg);
 }
 
 .pipeline-column.is-drop-target {
-  background: #e4e4e7;
-  border-color: #a1a1aa;
+  background: color-mix(in srgb, var(--seg) 8%, var(--surface-sunken));
+  border-color: var(--seg);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--seg) 18%, transparent);
 }
 
 .pipeline-column-header {
@@ -131,32 +68,43 @@ body.pipeline-page {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 14px 14px 10px;
-  border-bottom: 1px solid var(--border);
+  padding: 16px 16px 12px;
 }
 
 .pipeline-column-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--accent);
+  letter-spacing: 0.07em;
+  color: var(--ink-2);
+}
+
+.pipeline-column-header h2::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--seg);
 }
 
 .pipeline-count {
-  min-width: 1.5rem;
-  height: 1.5rem;
-  padding: 0 6px;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 8px;
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--text-muted);
+  color: var(--ink-2);
   font-size: 0.75rem;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .pipeline-cards {
@@ -164,92 +112,124 @@ body.pipeline-page {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px;
+  padding: 4px 12px 14px;
   min-height: 120px;
 }
 
 .pipeline-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 12px 10px;
-  box-shadow: var(--shadow);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
   cursor: grab;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), opacity 0.15s var(--ease), border-color 0.15s;
 }
 
-.pipeline-card:active {
-  cursor: grabbing;
+.pipeline-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
 }
+
+.pipeline-card:active { cursor: grabbing; }
 
 .pipeline-card.is-dragging {
   opacity: 0.45;
-  transform: scale(0.98);
+  transform: rotate(-1.5deg) scale(0.98);
+}
+
+.pipeline-card.is-saving { opacity: 0.7; }
+
+.pipeline-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .pipeline-card h3 {
-  margin: 0 0 4px;
-  font-size: 0.98rem;
+  margin: 0;
+  font-size: 0.95rem;
   font-weight: 650;
+  min-width: 0;
 }
 
 .pipeline-card h3 a {
-  color: inherit;
+  color: var(--ink);
   text-decoration: none;
 }
 
-.pipeline-card h3 a:hover {
-  text-decoration: underline;
-}
+.pipeline-card h3 a:hover { text-decoration: underline; }
 
 .pipeline-card .meta {
   margin: 0;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  line-height: 1.4;
+  color: var(--ink-3);
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .pipeline-card .note {
-  margin: 8px 0 0;
-  color: var(--text);
-  font-size: 0.82rem;
-  line-height: 1.35;
+  margin: 10px 0 0;
+  padding: 0 0 0 10px;
+  border-left: 2px solid var(--lavender);
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+.pipeline-move { display: block; margin-top: 10px; }
+
+.pipeline-move select {
+  min-height: 32px;
+  padding: 4px 30px 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background-color: var(--surface-2);
+  border-color: var(--border);
+  background-position: right 8px center;
+  background-size: 14px;
+}
+
 .pipeline-empty {
-  margin: 8px 4px;
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  font-style: italic;
+  margin: 4px 0;
+  padding: 18px 10px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 12px;
+  color: var(--ink-3);
+  font-size: 0.8rem;
+  text-align: center;
 }
 
 .pipeline-toast {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
-  background: var(--text);
-  color: #fafafa;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 0.9rem;
+  left: 50%;
+  bottom: 24px;
+  background: var(--ink);
+  color: var(--bg);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(8px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 20;
+  transform: translate(-50%, 8px);
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+  z-index: 80;
 }
 
 .pipeline-toast.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate(-50%, 0);
 }
 
-@media (max-width: 1100px) {
-  .pipeline-board {
-    grid-template-columns: repeat(5, minmax(220px, 1fr));
-  }
+@media (max-width: 720px) {
+  .pipeline-board { grid-template-columns: repeat(5, minmax(78vw, 1fr)); }
+  .pipeline-filters select { min-width: 0; width: 100%; }
 }

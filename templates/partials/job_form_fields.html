@@ -1,0 +1,34 @@
+{% csrf_token %}
+{% include "partials/non_field_errors.html" %}
+<section class="form-section">
+  <div class="form-section-head">
+    <h2>Role basics</h2>
+    <p>What candidates see first in search results.</p>
+  </div>
+  <div class="form-grid">
+    {% include "partials/field.html" with field=form.title %}
+    <div class="form-grid-2">
+      {% include "partials/field.html" with field=form.company %}
+      {% include "partials/field.html" with field=form.location %}
+    </div>
+  </div>
+</section>
+<section class="form-section">
+  <div class="form-section-head">
+    <h2>Details</h2>
+    <p>Describe the work and who will thrive in it.</p>
+  </div>
+  <div class="form-grid">
+    {% include "partials/field.html" with field=form.description %}
+    {% include "partials/field.html" with field=form.requirements %}
+  </div>
+</section>
+<section class="form-section">
+  <div class="form-section-head">
+    <h2>Timeline</h2>
+    <p>The posting leaves the job board after this date.</p>
+  </div>
+  <div class="form-grid-2">
+    {% include "partials/field.html" with field=form.closing_date %}
+  </div>
+</section>

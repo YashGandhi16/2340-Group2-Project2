@@ -1,0 +1,19 @@
+{% with vn=request.resolver_match.view_name %}
+<header class="public-header">
+  <div class="public-header-inner">
+    <a class="brand" href="{% url 'home' %}">
+      <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-logo"/></svg></span>
+      Meridian
+    </a>
+    <nav class="public-nav" aria-label="Primary">
+      <a class="hide-sm" href="{% url 'job_list' %}" {% if vn == 'job_list' or vn == 'job_detail' %}aria-current="page"{% endif %}>Browse jobs</a>
+      <button type="button" class="btn btn-ghost btn-icon" data-theme-toggle aria-label="Toggle theme">
+        <svg class="icon" data-icon="moon" aria-hidden="true"><use href="#i-moon"/></svg>
+        <svg class="icon" data-icon="sun" aria-hidden="true" style="display:none"><use href="#i-sun"/></svg>
+      </button>
+      <a href="{% url 'login' %}" {% if vn == 'login' %}aria-current="page"{% endif %}>Log in</a>
+      <a class="btn btn-primary btn-sm" href="{% url 'signup' %}">Sign up</a>
+    </nav>
+  </div>
+</header>
+{% endwith %}

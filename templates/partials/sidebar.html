@@ -1,0 +1,101 @@
+{% with vn=request.resolver_match.view_name app=request.resolver_match.app_name %}
+<aside class="sidebar" id="sidebar" aria-label="Primary">
+  <a class="brand" href="{% url 'home' %}">
+    <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-logo"/></svg></span>
+    Meridian
+  </a>
+  <span class="side-role">{% if user.is_superuser %}Admin workspace{% elif user.profile.is_recruiter %}Recruiter workspace{% else %}Job seeker{% endif %}</span>
+
+  {% if user.profile.is_recruiter %}
+    <div class="side-cta">
+      <a class="btn" href="{% url 'create_job' %}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Post a job</a>
+    </div>
+  {% endif %}
+
+  <nav class="side-nav">
+    {% if user.is_superuser %}
+      <p class="side-label">Administration</p>
+      <a class="side-link" href="{% url 'admin_dashboard:dashboard' %}" {% if vn == 'admin_dashboard:dashboard' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>Users &amp; roles
+      </a>
+      <a class="side-link" href="{% url 'admin_dashboard:job_list' %}" {% if vn == 'admin_dashboard:job_list' or vn == 'admin_dashboard:edit_job' or vn == 'admin_dashboard:delete_job' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Job moderation
+      </a>
+      <a class="side-link" href="{% url 'application_list' %}" {% if vn == 'application_list' or vn == 'review_application' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>All applications
+      </a>
+      <p class="side-label">Platform</p>
+      <a class="side-link" href="{% url 'job_list' %}" {% if vn == 'job_list' or vn == 'job_detail' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-briefcase"/></svg>Public job board
+      </a>
+      <a class="side-link" href="{% url 'admin:index' %}">
+        <svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>Django admin
+      </a>
+    {% elif user.profile.is_recruiter %}
+      <p class="side-label">Hiring</p>
+      <a class="side-link" href="{% url 'recruiter_dashboard' %}" {% if vn == 'recruiter_dashboard' or vn == 'edit_job' or vn == 'create_job' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>Dashboard
+      </a>
+      <a class="side-link" href="{% url 'hiring_pipeline' %}" {% if vn == 'hiring_pipeline' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-kanban"/></svg>Pipeline
+      </a>
+      <a class="side-link" href="{% url 'application_list' %}" {% if vn == 'application_list' or vn == 'review_application' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Applications
+      </a>
+      <a class="side-link" href="{% url 'candidate_search' %}" {% if vn == 'candidate_search' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-users"/></svg>Find candidates
+      </a>
+      <a class="side-link" href="{% url 'messaging:inbox' %}" aria-label="Messages{% if unread_message_count %} ({{ unread_message_count }} new){% endif %}" {% if app == 'messaging' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-message"/></svg>Messages
+        {% if unread_message_count %}<span class="count" aria-hidden="true">{{ unread_message_count }}</span>{% endif %}
+      </a>
+      <p class="side-label">Explore</p>
+      <a class="side-link" href="{% url 'job_list' %}" {% if vn == 'job_list' or vn == 'job_detail' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-briefcase"/></svg>Job board
+      </a>
+    {% else %}
+      <p class="side-label">Discover</p>
+      <a class="side-link" href="{% url 'home' %}" {% if vn == 'home' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>Overview
+      </a>
+      <a class="side-link" href="{% url 'job_list' %}" {% if vn == 'job_list' or vn == 'job_detail' %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Browse jobs
+      </a>
+      {% if user.profile.is_job_seeker %}
+        <a class="side-link" href="{% url 'my_applications' %}" {% if vn == 'my_applications' %}aria-current="page"{% endif %}>
+          <svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>My applications
+        </a>
+        <a class="side-link" href="{% url 'messaging:inbox' %}" aria-label="Messages{% if unread_message_count %} ({{ unread_message_count }} new){% endif %}" {% if app == 'messaging' %}aria-current="page"{% endif %}>
+          <svg class="icon" aria-hidden="true"><use href="#i-message"/></svg>Messages
+          {% if unread_message_count %}<span class="count" aria-hidden="true">{{ unread_message_count }}</span>{% endif %}
+        </a>
+        <p class="side-label">You</p>
+        <a class="side-link" href="{% url 'profile' %}" {% if vn == 'profile' %}aria-current="page"{% endif %}>
+          <svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>My profile
+        </a>
+      {% endif %}
+    {% endif %}
+  </nav>
+
+  <div class="side-footer">
+    <div class="side-user">
+      <span class="avatar avatar-sm avatar-round" data-name="{{ user.get_full_name|default:user.username }}" data-initials aria-hidden="true">{{ user.username|slice:":1" }}</span>
+      <div style="min-width:0">
+        <div class="side-user-name">{{ user.get_full_name|default:user.username }}</div>
+        <div class="side-user-role">{{ user.profile.get_role_display }}</div>
+      </div>
+    </div>
+    <button type="button" class="side-icon-btn" data-theme-toggle aria-label="Toggle theme">
+      <svg class="icon" data-icon="moon" aria-hidden="true"><use href="#i-moon"/></svg>
+      <svg class="icon" data-icon="sun" aria-hidden="true" style="display:none"><use href="#i-sun"/></svg>
+    </button>
+    {# Django 5 only accepts logout via POST, so this must be a form, not a link. #}
+    <form method="post" action="{% url 'logout' %}" data-no-loading>
+      {% csrf_token %}
+      <button type="submit" class="side-icon-btn" aria-label="Log out" title="Log out">
+        <svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>
+      </button>
+    </form>
+  </div>
+</aside>
+{% endwith %}

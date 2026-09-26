@@ -1,39 +1,56 @@
-<h1>Open jobs</h1>
+{% extends "base.html" %}
 
-{% if messages %}
-  <ul>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-  </ul>
+{% block title %}{% if query or location %}Search results{% else %}Open jobs{% endif %}{% endblock %}
+
+{% block content %}
+<section class="hero-band fade-up">
+  <p class="eyebrow"><svg class="icon" aria-hidden="true"><use href="#i-briefcase"/></svg>Job board</p>
+  <h1>Open jobs</h1>
+  <p class="lede">Search by role, company or skill, and narrow down by location.</p>
+  <form class="searchbar" method="get" role="search" data-no-loading>
+    <div class="seg">
+      <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+      <label class="sr-only" for="q">Search</label>
+      <input id="q" type="search" name="q" value="{{ query }}" placeholder="Position, company, or keyword">
+    </div>
+    <div class="seg">
+      <svg class="icon" aria-hidden="true"><use href="#i-map-pin"/></svg>
+      <label class="sr-only" for="location">Location</label>
+      <input id="location" type="search" name="location" value="{{ location }}" placeholder="e.g. Atlanta">
+    </div>
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+</section>
+
+<div class="results-head">
+  <h2>
+    {% with n=jobs|length %}
+      {{ n }} {% if query or location %}result{{ n|pluralize }}{% else %}open role{{ n|pluralize }}{% endif %}
+    {% endwith %}
+    {% if query %}<span class="muted" style="font-weight:500">for “{{ query }}”</span>{% endif %}
+    {% if location %}<span class="muted" style="font-weight:500">in {{ location }}</span>{% endif %}
+  </h2>
+  {% if query or location %}
+    <a class="btn btn-ghost btn-sm" href="{% url 'job_list' %}"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg>Clear</a>
+  {% endif %}
+</div>
+
+{% if jobs %}
+  <div class="job-grid fade-up-2">
+    {% for job in jobs %}{% include "partials/job_card.html" %}{% endfor %}
+  </div>
+{% else %}
+  <div class="card empty">
+    <div class="empty-art"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></div>
+    {% if query or location %}
+      <h3>No open jobs match your search.</h3>
+      <p>Try a broader keyword, check the spelling, or remove the location filter.</p>
+      <a class="btn" href="{% url 'job_list' %}">Clear filters</a>
+    {% else %}
+      <h3>No jobs posted yet.</h3>
+      <p>New roles show up here as soon as recruiters publish them.</p>
+      {% if user.profile.is_recruiter %}<a class="btn btn-primary" href="{% url 'create_job' %}">Post the first job</a>{% endif %}
+    {% endif %}
+  </div>
 {% endif %}
-
-<form method="get">
-  <label>
-    Search
-    <input type="search" name="q" value="{{ query }}" placeholder="Position, company, or keyword">
-  </label>
-  <label>
-    Location
-    <input type="search" name="location" value="{{ location }}" placeholder="e.g. Atlanta">
-  </label>
-  <button type="submit">Search</button>
-  {% if query or location %}<a href="{% url 'job_list' %}">Clear</a>{% endif %}
-</form>
-
-<ul>
-  {% for job in jobs %}
-    <li>
-      <a href="{% url 'job_detail' job.id %}">{{ job.title }}</a> — {{ job.company }}
-      {% if job.location %}· {{ job.location }}{% endif %}
-      {% if job.closing_date %}· closes {{ job.closing_date|date:"M j, Y" }}{% endif %}
-    </li>
-  {% empty %}
-    <li>{% if query or location %}No open jobs match your search.{% else %}No jobs posted yet.{% endif %}</li>
-  {% endfor %}
-</ul>
-
-<p>
-  {% if user.profile.is_recruiter %}<a href="{% url 'recruiter_dashboard' %}">Recruiter dashboard</a> · {% endif %}
-  <a href="{% url 'home' %}">Home</a>
-</p>
+{% endblock %}

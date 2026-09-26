@@ -1,84 +1,141 @@
-{% if messages %}
-  <ul>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
+{% extends "base.html" %}
 
-<h1>Admin dashboard</h1>
-<p>Signed in as <strong>{{ user.username }}</strong> ({{ user.profile.get_role_display }})</p>
-<p><a href="{% url 'admin_dashboard:job_list' %}">Moderate job postings</a></p>
+{% block title %}Admin dashboard{% endblock %}
 
-<h2>Accounts by role</h2>
-<ul>
-  <li><a href="{% url 'admin_dashboard:dashboard' %}">All users</a>: {{ total_users }}</li>
-  {% for value, label, count in role_counts %}
-    <li><a href="?role={{ value }}">{{ label }}</a>: {{ count }}</li>
-  {% endfor %}
-</ul>
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Admin dashboard</p>
+    <h1>Users &amp; roles</h1>
+    <p class="lede">Signed in as <strong>{{ user.username }}</strong> ({{ user.profile.get_role_display }}). Manage who can do what across the platform.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="{% url 'admin:index' %}"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>Django admin site</a>
+    <a class="btn btn-primary" href="{% url 'admin_dashboard:job_list' %}"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Moderate job postings</a>
+  </div>
+</header>
 
-<form method="get">
-  <label>
-    Search
-    <input type="search" name="q" value="{{ query }}" placeholder="Username or email">
-  </label>
-  <label>
-    Role
-    <select name="role">
-      <option value="">All roles</option>
-      {% for value, label in roles %}
-        <option value="{{ value }}" {% if role_filter == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </label>
-  <button type="submit">Filter</button>
-</form>
+<div class="stats fade-up">
+  <a class="stat stat--feature" href="{% url 'admin_dashboard:dashboard' %}">
+    <div class="stat-label"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg>Total users</div>
+    <div class="stat-value">{{ total_users }}</div>
+    <div class="stat-meta">{{ active_users }} active</div>
+  </a>
+  <a class="stat" href="{% url 'admin_dashboard:job_list' %}?status=open">
+    <div class="stat-label"><svg class="icon" aria-hidden="true"><use href="#i-briefcase"/></svg>Open postings</div>
+    <div class="stat-value">{{ job_stats.open }}</div>
+    <div class="stat-meta">of {{ job_stats.total }} total</div>
+  </a>
+  <a class="stat" href="{% url 'admin_dashboard:job_list' %}?status=hidden">
+    <div class="stat-label"><svg class="icon" aria-hidden="true"><use href="#i-eye-off"/></svg>Hidden postings</div>
+    <div class="stat-value">{{ job_stats.hidden }}</div>
+    <div class="stat-meta">Removed by moderation</div>
+  </a>
+  <a class="stat" href="{% url 'application_list' %}">
+    <div class="stat-label"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Applications</div>
+    <div class="stat-value">{{ application_total }}</div>
+    <div class="stat-meta">Submitted platform-wide</div>
+  </a>
+</div>
 
-<h2>User accounts</h2>
-<table border="1" cellpadding="6" style="border-collapse: collapse;">
-  <thead>
-    <tr>
-      <th>Username</th>
-      <th>Email</th>
-      <th>Current role</th>
-      <th>Status</th>
-      <th>Last login</th>
-      <th>Change</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for u in users %}
-      <tr>
-        <td>{{ u.username }}{% if u == user %} (you){% endif %}</td>
-        <td>{{ u.email|default:"—" }}</td>
-        <td>{{ u.profile.get_role_display }}</td>
-        <td>{% if u.is_active %}Active{% else %}Inactive{% endif %}</td>
-        <td>{{ u.last_login|default:"Never" }}</td>
-        <td>
-          <form method="post" action="{% url 'admin_dashboard:update_user' u.id %}">
-            {% csrf_token %}
-            <select name="role" aria-label="Role for {{ u.username }}">
-              {% for value, label in roles %}
-                <option value="{{ value }}" {% if u.profile.role == value %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-            <select name="is_active" aria-label="Status for {{ u.username }}">
-              <option value="1" {% if u.is_active %}selected{% endif %}>Active</option>
-              <option value="0" {% if not u.is_active %}selected{% endif %}>Inactive</option>
-            </select>
-            <button type="submit">Update</button>
-          </form>
-        </td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="6">No users match.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="layout-2 layout-2--left layout-2--wide-aside">
+  <aside class="card fade-up-2">
+    <div class="card-header"><h2>Accounts by role</h2></div>
+    <div class="card-body">
+      {% if total_users %}
+        <div class="dist-bar" role="img" aria-label="Accounts by role: {% for row in role_breakdown %}{{ row.label }} {{ row.count }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+          {% for row in role_breakdown %}{% if row.count %}<span class="dist-seg seg-{{ row.value }}" style="flex:{{ row.count }}" data-tip="{{ row.label }}: {{ row.count }} ({{ row.pct }}%)" tabindex="0"></span>{% endif %}{% endfor %}
+        </div>
+      {% else %}
+        <div class="dist-empty"></div>
+      {% endif %}
+      <ul class="dist-legend">
+        <li><a href="{% url 'admin_dashboard:dashboard' %}" {% if not role_filter %}aria-current="true"{% endif %}><strong>All users</strong></a><span class="val">{{ total_users }}</span><span class="pct"></span></li>
+        {% for row in role_breakdown %}
+          <li class="seg-{{ row.value }}"><span class="swatch"></span><a href="?role={{ row.value }}" {% if role_filter == row.value %}aria-current="true"{% endif %}>{{ row.label }}</a><span class="val">{{ row.count }}</span><span class="pct">{{ row.pct }}%</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </aside>
 
-<p><a href="{% url 'home' %}">Home</a> · <a href="{% url 'admin:index' %}">Django admin site</a></p>
-<form method="post" action="{% url 'logout' %}">
-  {% csrf_token %}
-  <button type="submit">Log out</button>
-</form>
+  <section class="card fade-up-3">
+    <div class="card-header">
+      <h2>User accounts</h2>
+      <span class="muted">{{ users|length }} shown</span>
+    </div>
+    <form method="get" class="table-toolbar" data-no-loading>
+      <div class="input-icon grow" style="max-width:360px">
+        <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+        <label class="sr-only" for="user-q">Search</label>
+        <input id="user-q" type="search" name="q" value="{{ query }}" placeholder="Username or email">
+      </div>
+      <div class="row">
+        <label class="sr-only" for="user-role">Role</label>
+        <select id="user-role" name="role" style="width:auto" data-autosubmit>
+          <option value="">All roles</option>
+          {% for value, label in roles %}
+            <option value="{{ value }}" {% if role_filter == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn">Filter</button>
+        {% if query or role_filter %}<a class="btn btn-ghost" href="{% url 'admin_dashboard:dashboard' %}">Clear</a>{% endif %}
+      </div>
+    </form>
+    {% if users %}
+      <div class="table-wrap">
+        <table class="table table--stack">
+          <thead>
+            <tr>
+              <th scope="col">User</th>
+              <th scope="col">Current role</th>
+              <th scope="col">Status</th>
+              <th scope="col">Last login</th>
+              <th scope="col" class="actions">Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+              <tr>
+                <td class="cell-main">
+                  <div class="cell-person">
+                    <span class="avatar avatar-sm" data-name="{{ u.get_full_name|default:u.username }}" data-initials aria-hidden="true">{{ u.username|slice:":1" }}</span>
+                    <div class="who">
+                      <strong>{{ u.username }}{% if u == user %} <span class="badge badge-brand" style="margin-left:4px">you</span>{% endif %}</strong>
+                      <span>{{ u.email|default:"—" }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td data-label="Role"><span class="badge badge-status badge-dot seg-{{ u.profile.role }}">{{ u.profile.get_role_display }}</span></td>
+                <td data-label="Status">{% if u.is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge">Inactive</span>{% endif %}</td>
+                <td data-label="Last login" class="nowrap text-sm">{{ u.last_login|date:"M j, Y"|default:"Never" }}</td>
+                <td class="actions">
+                  <form method="post" action="{% url 'admin_dashboard:update_user' u.id %}" class="inline-form">
+                    {% csrf_token %}
+                    <select name="role" aria-label="Role for {{ u.username }}">
+                      {% for value, label in roles %}
+                        <option value="{{ value }}" {% if u.profile.role == value %}selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                    <select name="is_active" aria-label="Status for {{ u.username }}">
+                      <option value="1" {% if u.is_active %}selected{% endif %}>Active</option>
+                      <option value="0" {% if not u.is_active %}selected{% endif %}>Inactive</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm">Update</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty">
+        <div class="empty-art"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></div>
+        <h3>No users match.</h3>
+        <p>Try a different search or clear the role filter.</p>
+        <a class="btn" href="{% url 'admin_dashboard:dashboard' %}">Clear filters</a>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

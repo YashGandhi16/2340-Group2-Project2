@@ -1,29 +1,46 @@
-{% if messages %}
-  <ul>
-    {% for message in messages %}
-      <li>{{ message }}</li>
+{% extends "base.html" %}
+
+{% block title %}Conversation with {{ other.get_full_name|default:other.username }}{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'messaging:inbox' %}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Back to messages</a>
+
+<section class="card chat fade-up">
+  <header class="chat-head">
+    <span class="avatar avatar-round" data-name="{{ other.get_full_name|default:other.username }}" data-initials aria-hidden="true">{{ other.username|slice:":1" }}</span>
+    <div class="grow">
+      <h1>Conversation with {{ other.get_full_name|default:other.username }}</h1>
+      <p class="text-xs muted" style="margin:0">
+        {% if user == conversation.recruiter %}Candidate{% else %}Recruiter{% endif %}
+        · started {{ conversation.created_at|date:"M j, Y" }}
+      </p>
+    </div>
+    <span class="badge badge-outline" title="Email addresses are never shared"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Private</span>
+  </header>
+
+  <div class="chat-thread" data-chat-thread role="log" aria-label="Message history">
+    {% for msg in thread %}
+      {% ifchanged msg.sent_at.date %}<div class="chat-day">{{ msg.sent_at|date:"l, M j" }}</div>{% endifchanged %}
+      <div class="bubble-group{% if msg.sender == user %} is-mine{% endif %}">
+        <div class="bubble">
+          <span class="sr-only">{% if msg.sender == user %}You{% else %}{{ msg.sender.get_full_name|default:msg.sender.username }}{% endif %}:</span>
+          {{ msg.body|linebreaks }}
+        </div>
+        <span class="bubble-meta">{% if msg.sender == user %}You{% else %}{{ msg.sender.get_full_name|default:msg.sender.username }}{% endif %} · {{ msg.sent_at|date:"g:i a" }}</span>
+      </div>
+    {% empty %}
+      <div class="empty empty-compact"><p>No messages yet. Say hello!</p></div>
     {% endfor %}
-  </ul>
-{% endif %}
-
-<h1>Conversation with {{ other.get_full_name|default:other.username }}</h1>
-<p>
-  {% if user == conversation.recruiter %}Candidate{% else %}Recruiter{% endif %}
-  · started {{ conversation.created_at|date:"M j, Y" }}
-</p>
-
-{% for msg in thread %}
-  <div style="margin-bottom: 0.75rem; padding: 0.5rem; border-left: 3px solid {% if msg.sender == user %}#4a7{% else %}#888{% endif %};">
-    <strong>{% if msg.sender == user %}You{% else %}{{ msg.sender.get_full_name|default:msg.sender.username }}{% endif %}</strong>
-    <small>{{ msg.sent_at|date:"M j, Y, g:i a" }}</small>
-    {{ msg.body|linebreaks }}
   </div>
-{% endfor %}
 
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Send</button>
-</form>
-
-<p><a href="{% url 'messaging:inbox' %}">Back to messages</a> · <a href="{% url 'home' %}">Home</a></p>
+  <div class="composer" data-composer>
+    <form method="post">
+      {% csrf_token %}
+      {% include "partials/field.html" with field=form.body %}
+      <button type="submit" class="btn btn-primary" style="min-height:46px"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span>Send</span></button>
+    </form>
+    <p class="hint">Press ⌘/Ctrl + Enter to send.</p>
+  </div>
+</section>
+{% endblock %}

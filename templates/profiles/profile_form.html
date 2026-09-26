@@ -1,12 +1,90 @@
-<h1>My profile</h1>
-<p><a href="{% url 'home' %}">Back to home</a></p>
-{% if messages %}
-    {% for message in message %}
-        <p>{{ message }} </p>
-    {% endfor %}
-{% endif %}
-<form method="post">
+{% extends "base.html" %}
+
+{% block title %}My profile{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <div class="row" style="gap:18px;flex-wrap:nowrap">
+    <span class="avatar avatar-lg" data-name="{{ user.get_full_name|default:user.username }}" data-initials aria-hidden="true">{{ user.username|slice:":1" }}</span>
+    <div>
+      <p class="eyebrow" style="margin-bottom:4px">Candidate profile</p>
+      <h1>My profile</h1>
+      <p class="lede" style="margin-top:4px">This is what recruiters see when you apply or show up in their search.</p>
+    </div>
+  </div>
+</header>
+
+<div class="layout-2">
+  <form method="post" class="card fade-up">
     {% csrf_token %}
-    {{ form.as_p}}
-    <button type="submit">Save profile</button>
-</form>
+    {% include "partials/non_field_errors.html" %}
+
+    <section class="form-section">
+      <div class="form-section-head">
+        <h2>Introduction</h2>
+        <p>The headline, location and skills recruiters scan and search first.</p>
+      </div>
+      <div class="form-grid">
+        <div class="form-grid-2">
+          {% include "partials/field.html" with field=form.headline %}
+          {% include "partials/field.html" with field=form.location %}
+        </div>
+        {% include "partials/field.html" with field=form.skills %}
+        {% include "partials/field.html" with field=form.summary %}
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="form-section-head">
+        <h2>Background</h2>
+        <p>Roles, projects and studies that show what you can do.</p>
+      </div>
+      <div class="form-grid">
+        {% include "partials/field.html" with field=form.work_experience %}
+        {% include "partials/field.html" with field=form.education %}
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="form-section-head">
+        <h2>Links</h2>
+        <p>Optional places where recruiters can see more of your work.</p>
+      </div>
+      <div class="form-grid">
+        {% include "partials/field.html" with field=form.linkedin_url %}
+        {% include "partials/field.html" with field=form.github_url %}
+        {% include "partials/field.html" with field=form.portfolio_url %}
+      </div>
+    </section>
+
+    <div class="form-actions">
+      <a class="btn btn-ghost" href="{% url 'home' %}">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save profile</button>
+    </div>
+  </form>
+
+  <aside class="stack sticky fade-up-2">
+    <div class="card">
+      <div class="card-body">
+        <div class="row-between" style="margin-bottom:10px">
+          <h2>Profile strength</h2>
+          <strong style="font-size:1.25rem">{{ completeness }}%</strong>
+        </div>
+        <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ completeness }}" aria-label="Profile completeness"><span style="width:{{ completeness }}%"></span></div>
+        <ul class="checklist">
+          {% for label, filled in checklist %}
+            <li class="{% if filled %}is-done{% endif %}">
+              <span class="tick"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>
+              {{ label }}<span class="sr-only">{% if filled %} (complete){% else %} (missing){% endif %}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="alert alert-info">
+      <svg class="icon" aria-hidden="true"><use href="#i-sparkles"/></svg>
+      <div><strong>Tip</strong>Separate skills with commas (for example “Python, SQL, Figma”) so each one shows up as its own tag and matches recruiter searches.</div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

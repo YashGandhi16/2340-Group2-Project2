@@ -1,0 +1,18 @@
+<article class="job-card">
+  <div class="job-card-top">
+    <span class="company-mark" data-name="{{ job.company }}" aria-hidden="true">{{ job.company|slice:":1"|upper }}</span>
+    <div class="grow">
+      <h3><a href="{% url 'job_detail' job.id %}">{{ job.title }}</a></h3>
+      <div class="company">{{ job.company }}</div>
+    </div>
+  </div>
+  <p class="snippet">{{ job.description|striptags|truncatewords:28 }}</p>
+  <ul class="meta-list">
+    {% if job.location %}<li><svg class="icon" aria-hidden="true"><use href="#i-map-pin"/></svg>{{ job.location }}</li>{% endif %}
+    {% if job.closing_date %}<li><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>Closes {{ job.closing_date|date:"M j" }}</li>{% endif %}
+  </ul>
+  <div class="job-card-foot">
+    <span>Posted {{ job.posted_at|date:"M j, Y" }}</span>
+    <span class="go" aria-hidden="true">View role <svg class="icon"><use href="#i-arrow-right"/></svg></span>
+  </div>
+</article>

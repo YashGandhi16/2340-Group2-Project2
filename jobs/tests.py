@@ -4,6 +4,7 @@ ApplyToJobTests               - Job Seekers applying to a job with a note
 ReviewApplicationTests        - recruiters viewing applications (basic access)
 ReviewApplicationDetailsTests - recruiters reviewing full candidate details (SCRUM-20)
 RecruiterPostingTests         - recruiter dashboard, creating/editing postings, closing dates, search
+ApplicationVisibilityTests    - recruiters see only their postings' applications; admins see all
 """
 
 from datetime import timedelta
@@ -555,3 +556,71 @@ class HiringPipelineTests(TestCase):
         self.client.login(username='pipeline-seeker', password='pass12345')
         response = self.client.get(reverse('hiring_pipeline'))
         self.assertRedirects(response, reverse('home'))
+
+
+class ApplicationVisibilityTests(TestCase):
+    """Recruiters only see applications for their own postings; admins see every application."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username='owner', password='pass12345')
+        self.owner.profile.role = Role.RECRUITER
+        self.owner.profile.save()
+        self.rival = User.objects.create_user(username='rival', password='pass12345')
+        self.rival.profile.role = Role.RECRUITER
+        self.rival.profile.save()
+        self.admin = User.objects.create_superuser('boss', 'boss@example.com', 'pass12345')
+
+        self.own_job = Job.objects.create(title='Own role', company='A', description='d', posted_by=self.owner)
+        self.rival_job = Job.objects.create(title='Rival role', company='B', description='d', posted_by=self.rival)
+        seeker = User.objects.create_user(username='applicant', password='pass12345')
+        self.own_app = JobApplication.objects.create(job=self.own_job, applicant=seeker, note='Mine')
+        self.rival_app = JobApplication.objects.create(job=self.rival_job, applicant=seeker, note='Theirs')
+
+    def test_recruiter_list_only_shows_own_postings(self):
+        """The application list hides applications to other recruiters' postings."""
+        self.client.login(username='owner', password='pass12345')
+        response = self.client.get(reverse('application_list'))
+        self.assertEqual(list(response.context['applications']), [self.own_app])
+
+    def test_recruiter_cannot_filter_by_another_recruiters_job(self):
+        """Edge case: ?job= for someone else's posting returns 404."""
+        self.client.login(username='owner', password='pass12345')
+        response = self.client.get(reverse('application_list'), {'job': self.rival_job.pk})
+        self.assertEqual(response.status_code, 404)
+
+    def test_review_page_hides_other_postings_applications(self):
+        """The candidate's other applications only include this recruiter's postings."""
+        self.client.login(username='owner', password='pass12345')
+        response = self.client.get(reverse('review_application', args=[self.own_app.pk]))
+        self.assertEqual(list(response.context['other_applications']), [])
+        self.assertNotContains(response, 'Rival role')
+
+    def test_job_detail_hides_applicant_link_from_other_recruiters(self):
+        """A recruiter viewing someone else's posting gets no applicant count or link."""
+        self.client.login(username='owner', password='pass12345')
+        response = self.client.get(reverse('job_detail', args=[self.rival_job.pk]))
+        self.assertNotContains(response, 'Review applicants')
+        self.assertNotContains(response, f"{reverse('application_list')}?job={self.rival_job.pk}")
+
+    def test_admin_sees_every_application(self):
+        """Admins can list every application and filter by any posting."""
+        self.client.login(username='boss', password='pass12345')
+        response = self.client.get(reverse('application_list'))
+        self.assertEqual(set(response.context['applications']), {self.own_app, self.rival_app})
+        response = self.client.get(reverse('application_list'), {'job': self.rival_job.pk})
+        self.assertEqual(list(response.context['applications']), [self.rival_app])
+
+    def test_admin_can_view_but_not_change_status(self):
+        """Admins can open any application; status stays the posting recruiter's decision."""
+        self.client.login(username='boss', password='pass12345')
+        url = reverse('review_application', args=[self.rival_app.pk])
+        self.assertContains(self.client.get(url), 'Theirs')
+        self.client.post(url, {'status': ApplicationStatus.OFFER})
+        self.rival_app.refresh_from_db()
+        self.assertEqual(self.rival_app.status, ApplicationStatus.APPLIED)
+
+    def test_admin_sees_applicant_link_on_job_detail(self):
+        """Admins get a link to any posting's applicants."""
+        self.client.login(username='boss', password='pass12345')
+        response = self.client.get(reverse('job_detail', args=[self.rival_job.pk]))
+        self.assertContains(response, f"{reverse('application_list')}?job={self.rival_job.pk}")

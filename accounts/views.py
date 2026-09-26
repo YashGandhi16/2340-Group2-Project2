@@ -34,6 +34,20 @@ def recruiter_required(view_func):
     return _wrapped
 
 
+def recruiter_or_admin_required(view_func):
+    @wraps(view_func)
+    @login_required
+    def _wrapped(request, *args, **kwargs):
+        profile = getattr(request.user, 'profile', None)
+        is_recruiter = profile is not None and profile.role == Role.RECRUITER
+        if not (is_recruiter or request.user.is_superuser):
+            messages.error(request, 'Recruiter or Administrator access required.')
+            return redirect('home')
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
+
+
 def job_seeker_required(view_func):
     @wraps(view_func)
     @login_required

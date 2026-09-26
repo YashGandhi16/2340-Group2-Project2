@@ -1,98 +1,156 @@
-<h1>Review application</h1>
-<p>
-  <strong>{{ candidate.get_full_name|default:candidate.username }}</strong>
-  applied for <a href="{% url 'job_detail' application.job.id %}">{{ application.job.title }}</a>
-  at {{ application.job.company }} on {{ application.applied_at|date:"M j, Y, g:i a" }}
-</p>
+{% extends "base.html" %}
 
-<section>
-  <h2>Candidate</h2>
-  <p>
-    <strong>Username:</strong> {{ candidate.username }}<br>
-    {% if candidate.email %}
-      <strong>Email:</strong> <a href="mailto:{{ candidate.email }}">{{ candidate.email }}</a><br>
-    {% endif %}
-    <strong>Member since:</strong> {{ candidate.date_joined|date:"M j, Y" }}
-  </p>
-  <p><a href="{% url 'messaging:start_conversation' candidate.id %}">Message this candidate</a></p>
+{% block title %}Review {{ candidate.get_full_name|default:candidate.username }}{% endblock %}
 
-  {% if candidate_profile and not candidate_profile.is_empty %}
-    {% if candidate_profile.headline %}
-      <p><em>{{ candidate_profile.headline }}</em></p>
-    {% endif %}
-    {% if candidate_profile.location %}
-      <p><strong>Location:</strong> {{ candidate_profile.location }}</p>
-    {% endif %}
-    {% if candidate_profile.skill_list %}
-      <h3>Skills</h3>
-      <ul>
-        {% for skill in candidate_profile.skill_list %}
-          <li>{{ skill }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-    {% if candidate_profile.summary %}
-      <h3>Summary</h3>
-      {{ candidate_profile.summary|linebreaks }}
-    {% endif %}
-    {% if candidate_profile.work_experience %}
-      <h3>Work experience</h3>
-      {{ candidate_profile.work_experience|linebreaks }}
-    {% endif %}
-    {% if candidate_profile.education %}
-      <h3>Education</h3>
-      {{ candidate_profile.education|linebreaks }}
-    {% endif %}
-    {% if candidate_profile.links %}
-      <h3>Links</h3>
-      <ul>
-        {% for label, url in candidate_profile.links %}
-          <li><a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ label }}</a></li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  {% else %}
-    <p>No profile details on file yet.</p>
+{% block content %}
+<a class="back-link" href="{% url 'application_list' %}?job={{ application.job.id }}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Back to applicants for this job</a>
+
+<header class="page-header">
+  <div class="row" style="gap:18px;flex-wrap:nowrap;align-items:center">
+    <span class="avatar avatar-lg" data-name="{{ candidate.get_full_name|default:candidate.username }}" data-initials aria-hidden="true">{{ candidate.username|slice:":1" }}</span>
+    <div>
+      <p class="eyebrow" style="margin-bottom:4px">Review application</p>
+      <h1>{{ candidate.get_full_name|default:candidate.username }}</h1>
+      <p class="lede" style="margin-top:4px">
+        Applied for <a href="{% url 'job_detail' application.job.id %}">{{ application.job.title }}</a>
+        at {{ application.job.company }} on {{ application.applied_at|date:"M j, Y, g:i a" }}
+      </p>
+    </div>
+  </div>
+  {% if user.profile.is_recruiter %}
+    <div class="page-actions">
+      <a class="btn" href="{% url 'messaging:start_conversation' candidate.id %}"><svg class="icon" aria-hidden="true"><use href="#i-message"/></svg>Message this candidate</a>
+    </div>
   {% endif %}
-</section>
+</header>
 
-<section>
-  <h2>Application</h2>
-  <p><strong>Status:</strong> {{ application.get_status_display }}</p>
-  <form method="post">
-    {% csrf_token %}
-    <label>
-      Update status
-      <select name="status">
-        {% for value, label in statuses %}
-          <option value="{{ value }}" {% if application.status == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <button type="submit">Save status</button>
-  </form>
-  <h3>Tailored note</h3>
-  {{ application.note|linebreaks }}
-  <h3>Job description</h3>
-  {{ application.job.description|linebreaks }}
-</section>
+<div class="layout-2">
+  <div class="stack-lg">
+    <section class="card fade-up">
+      <div class="card-header">
+        <h2>Application</h2>
+        <span><span class="sr-only">Status:</span>{% include "partials/status_badge.html" with status=application.status label=application.get_status_display %}</span>
+      </div>
+      <div class="card-body">
+        <h3 class="section-title">Tailored note</h3>
+        <div class="quote-block">{{ application.note|linebreaks }}</div>
+      </div>
+      <details class="disclosure">
+        <summary>Job description <svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg></summary>
+        <div class="disclosure-body prose">{{ application.job.description|linebreaks }}</div>
+      </details>
+    </section>
 
-<section>
-  <h2>Other applications from this candidate</h2>
-  <ul>
-    {% for other in other_applications %}
-      <li>
-        <a href="{% url 'review_application' other.id %}">{{ other.job.title }}</a>
-        at {{ other.job.company }} ({{ other.applied_at|date:"M j, Y" }})
-      </li>
-    {% empty %}
-      <li>None.</li>
-    {% endfor %}
-  </ul>
-</section>
+    <section class="card fade-up-2">
+      <div class="card-header"><h2>Candidate</h2></div>
+      {% if candidate_profile and not candidate_profile.is_empty %}
+        <div class="card-body stack-lg">
+          {% if candidate_profile.headline %}
+            <p style="font-family:var(--font-display);font-size:1.2rem;color:var(--ink);margin:0"><em>{{ candidate_profile.headline }}</em></p>
+          {% endif %}
+          {% if candidate_profile.skill_list %}
+            <div>
+              <h3 class="section-title">Skills</h3>
+              <ul class="chips">
+                {% for skill in candidate_profile.skill_list %}<li>{{ skill }}</li>{% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+          {% if candidate_profile.summary %}
+            <div>
+              <h3 class="section-title">Summary</h3>
+              <div class="prose">{{ candidate_profile.summary|linebreaks }}</div>
+            </div>
+          {% endif %}
+          {% if candidate_profile.work_experience %}
+            <div>
+              <h3 class="section-title">Work experience</h3>
+              <div class="prose">{{ candidate_profile.work_experience|linebreaks }}</div>
+            </div>
+          {% endif %}
+          {% if candidate_profile.education %}
+            <div>
+              <h3 class="section-title">Education</h3>
+              <div class="prose">{{ candidate_profile.education|linebreaks }}</div>
+            </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty empty-compact">
+          <div class="empty-art" style="width:56px;height:56px"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg></div>
+          <p>No profile details on file yet.</p>
+        </div>
+      {% endif %}
+    </section>
+  </div>
 
-<p>
-  <a href="{% url 'application_list' %}?job={{ application.job.id }}">Back to applicants for this job</a>
-  · <a href="{% url 'application_list' %}">All applications</a>
-  · <a href="{% url 'home' %}">Home</a>
-</p>
+  <aside class="stack sticky">
+    {% if can_update_status %}
+    <section class="card fade-up">
+      <form method="post" class="card-body">
+        {% csrf_token %}
+        <fieldset class="status-picker">
+          <legend>Update status</legend>
+          {% for value, label in statuses %}
+            <div class="status-option seg-{{ value }}">
+              <input type="radio" id="status-{{ value }}" name="status" value="{{ value }}" {% if application.status == value %}checked{% endif %}>
+              <label for="status-{{ value }}">{{ label }}<svg class="icon check" aria-hidden="true"><use href="#i-check"/></svg></label>
+            </div>
+          {% endfor %}
+        </fieldset>
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:16px">Save status</button>
+        <p class="text-xs muted" style="margin:10px 0 0;text-align:center">Last updated {{ application.status_updated_at|date:"M j, Y, g:i a" }}</p>
+      </form>
+    </section>
+    {% else %}
+    <div class="alert alert-info fade-up">
+      <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
+      <div><strong>Viewing as administrator</strong>Posted by {{ application.job.posted_by.username|default:"unknown" }}. Only that recruiter can change the status. Last updated {{ application.status_updated_at|date:"M j, Y" }}.</div>
+    </div>
+    {% endif %}
+
+    <section class="card fade-up-2">
+      <div class="card-header"><h2>Contact &amp; details</h2></div>
+      <div class="card-body">
+        <dl class="kv">
+          <dt><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>Username</dt><dd>{{ candidate.username }}</dd>
+          {% if candidate.email %}
+            <dt><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg>Email</dt><dd><a href="mailto:{{ candidate.email }}">{{ candidate.email }}</a></dd>
+          {% endif %}
+          {% if candidate_profile.location %}
+            <dt><svg class="icon" aria-hidden="true"><use href="#i-map-pin"/></svg>Location</dt><dd>{{ candidate_profile.location }}</dd>
+          {% endif %}
+          <dt><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>Member since</dt><dd>{{ candidate.date_joined|date:"M j, Y" }}</dd>
+        </dl>
+        {% if candidate_profile.links %}
+          <h3 class="section-title" style="margin-top:20px">Links</h3>
+          <ul class="link-list">
+            {% for label, url in candidate_profile.links %}
+              <li><a href="{{ url }}" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>{{ label }}<span class="sr-only"> (opens in new tab)</span></a></li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card fade-up-3">
+      <div class="card-header"><h2>Other applications from this candidate</h2></div>
+      {% if other_applications %}
+        <ul class="list">
+          {% for other in other_applications %}
+            <li class="list-row" style="padding:12px 20px">
+              <div class="grow">
+                <a class="primary" href="{% url 'review_application' other.id %}">{{ other.job.title }}</a>
+                <div class="secondary">{{ other.job.company }} · {{ other.applied_at|date:"M j, Y" }}</div>
+              </div>
+              {% include "partials/status_badge.html" with status=other.status label=other.get_status_display %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="card-body"><p class="muted text-sm">None.</p></div>
+      {% endif %}
+    </section>
+  </aside>
+</div>
+{% endblock %}

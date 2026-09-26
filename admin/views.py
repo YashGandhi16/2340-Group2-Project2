@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 from accounts.models import Profile, Role
 from accounts.views import administrator_required
 from jobs.forms import JobPostingForm
-from jobs.models import Job
+from jobs.models import Job, JobApplication
 
 User = get_user_model()
 
@@ -32,6 +32,24 @@ def dashboard(request):
         **{value: Count('pk', filter=Q(role=value)) for value in Role.values},
     )
     role_counts = [(value, label, counts[value]) for value, label in Role.choices]
+    total = counts['total']
+    role_breakdown = [
+        {
+            'value': value,
+            'label': label,
+            'count': counts[value],
+            'pct': round(counts[value] * 100 / total) if total else 0,
+        }
+        for value, label in Role.choices
+    ]
+
+    today = timezone.localdate()
+    job_stats = Job.objects.aggregate(
+        total=Count('pk'),
+        hidden=Count('pk', filter=Q(is_hidden=True)),
+        closed=Count('pk', filter=Q(is_hidden=False, closing_date__lt=today)),
+    )
+    job_stats['open'] = job_stats['total'] - job_stats['hidden'] - job_stats['closed']
 
     return render(
         request,
@@ -40,7 +58,11 @@ def dashboard(request):
             'users': users,
             'roles': Role.choices,
             'role_counts': role_counts,
+            'role_breakdown': role_breakdown,
             'total_users': counts['total'],
+            'active_users': User.objects.filter(is_active=True).count(),
+            'job_stats': job_stats,
+            'application_total': JobApplication.objects.count(),
             'role_filter': role_filter,
             'query': query,
         },
@@ -109,10 +131,19 @@ def job_list(request):
             | Q(posted_by__username__icontains=query)
         )
 
+    all_jobs = Job.objects.all()
+    status_counts = all_jobs.aggregate(
+        all=Count('pk'),
+        open=Count('pk', filter=Q(is_hidden=False) & (Q(closing_date__gte=today) | Q(closing_date__isnull=True))),
+        closed=Count('pk', filter=Q(is_hidden=False, closing_date__lt=today)),
+        hidden=Count('pk', filter=Q(is_hidden=True)),
+    )
+
     return render(
         request,
         'admin_dashboard/job_list.html',
         {
+            'status_counts': status_counts,
             'jobs': jobs,
             'status': status,
             'status_filters': JOB_STATUS_FILTERS,

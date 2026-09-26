@@ -1,79 +1,116 @@
-{% if messages %}
-  <ul>
-    {% for message in messages %}
-      <li>{{ message }}</li>
+{% extends "base.html" %}
+
+{% block title %}Moderate job postings{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Moderation</p>
+    <h1>Moderate job postings</h1>
+    <p class="lede">Hide postings that break the rules (applications are kept), restore them, or delete them permanently.</p>
+  </div>
+</header>
+
+<div class="filter-row">
+  <nav class="segmented" aria-label="Filter by status">
+    <a href="?{% if query %}q={{ query|urlencode }}{% endif %}" {% if not status %}aria-current="true"{% endif %}>All postings <span class="n">{{ status_counts.all }}</span></a>
+    {% for value, label in status_filters %}
+      <a href="?status={{ value }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}" {% if status == value %}aria-current="true"{% endif %}>{{ label }} <span class="n">{% if value == 'open' %}{{ status_counts.open }}{% elif value == 'closed' %}{{ status_counts.closed }}{% else %}{{ status_counts.hidden }}{% endif %}</span></a>
     {% endfor %}
-  </ul>
-{% endif %}
+  </nav>
+  <form method="get" class="row" style="flex-wrap:nowrap" data-no-loading>
+    {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+    <div class="input-icon" style="width:min(320px,100%)">
+      <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+      <label class="sr-only" for="job-q">Search</label>
+      <input id="job-q" type="search" name="q" value="{{ query }}" placeholder="Position, company, or recruiter">
+    </div>
+    <button type="submit" class="btn">Search</button>
+  </form>
+</div>
 
-<h1>Moderate job postings</h1>
+<section class="card fade-up">
+  {% if jobs %}
+    <div class="table-wrap">
+      <table class="table table--stack">
+        <thead>
+          <tr>
+            <th scope="col">Posting</th>
+            <th scope="col">Posted by</th>
+            <th scope="col">Posted</th>
+            <th scope="col">Closing date</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="num">Applicants</th>
+            <th scope="col" class="actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+            <tr>
+              <td class="cell-main">
+                <div class="cell-person">
+                  <span class="company-mark" style="width:36px;height:36px;border-radius:10px;font-size:1rem" data-name="{{ job.company }}" aria-hidden="true">{{ job.company|slice:":1"|upper }}</span>
+                  <div class="who">
+                    <a href="{% url 'job_detail' job.id %}" class="row-link">{{ job.title }}</a>
+                    <span>{{ job.company }}</span>
+                  </div>
+                </div>
+                {% if job.is_hidden and job.moderation_note %}
+                  <div class="text-xs" style="color:var(--danger);margin-top:6px">Reason: {{ job.moderation_note }}</div>
+                {% endif %}
+              </td>
+              <td data-label="Posted by">{{ job.posted_by.username|default:"—" }}</td>
+              <td data-label="Posted" class="nowrap">{{ job.posted_at|date:"M j, Y" }}</td>
+              <td data-label="Closing date" class="nowrap">{{ job.closing_date|date:"M j, Y"|default:"—" }}</td>
+              <td data-label="Status">{% include "partials/job_status_badge.html" %}</td>
+              <td data-label="Applicants" class="num">{{ job.application_count }}</td>
+              <td class="actions">
+                {% if job.is_hidden %}
+                  <form method="post" action="{% url 'admin_dashboard:moderate_job' job.id %}" class="inline-form" style="display:inline-flex">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="restore">
+                    <button type="submit" class="btn btn-sm btn-soft"><svg class="icon" aria-hidden="true"><use href="#i-restore"/></svg>Restore</button>
+                  </form>
+                {% else %}
+                  <button type="button" class="btn btn-sm" data-dialog-open="hide-{{ job.id }}"><svg class="icon" aria-hidden="true"><use href="#i-eye-off"/></svg>Hide</button>
+                {% endif %}
+                <a class="btn btn-ghost btn-sm btn-icon" href="{% url 'admin_dashboard:edit_job' job.id %}" aria-label="Edit {{ job.title }}" title="Edit"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
+                <a class="btn btn-danger-ghost btn-sm btn-icon" href="{% url 'admin_dashboard:delete_job' job.id %}" aria-label="Delete {{ job.title }}" title="Delete"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></a>
 
-<form method="get">
-  <label>
-    Search
-    <input type="search" name="q" value="{{ query }}" placeholder="Position, company, or recruiter">
-  </label>
-  <label>
-    Status
-    <select name="status">
-      <option value="">All postings</option>
-      {% for value, label in status_filters %}
-        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </label>
-  <button type="submit">Filter</button>
-</form>
-
-<table border="1" cellpadding="6" style="border-collapse: collapse; margin-top: 1rem;">
-  <thead>
-    <tr>
-      <th>Position</th>
-      <th>Company</th>
-      <th>Posted by</th>
-      <th>Posted</th>
-      <th>Closing date</th>
-      <th>Status</th>
-      <th>Applicants</th>
-      <th>Moderate</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for job in jobs %}
-      <tr>
-        <td><a href="{% url 'job_detail' job.id %}">{{ job.title }}</a></td>
-        <td>{{ job.company }}</td>
-        <td>{{ job.posted_by.username|default:"—" }}</td>
-        <td>{{ job.posted_at|date:"M j, Y" }}</td>
-        <td>{{ job.closing_date|date:"M j, Y"|default:"—" }}</td>
-        <td>
-          {% if job.is_hidden %}<strong>Hidden</strong>{% if job.moderation_note %}: {{ job.moderation_note }}{% endif %}
-          {% elif job.is_open %}Open{% else %}Closed{% endif %}
-        </td>
-        <td>{{ job.application_count }}</td>
-        <td>
-          <form method="post" action="{% url 'admin_dashboard:moderate_job' job.id %}">
-            {% csrf_token %}
-            {% if job.is_hidden %}
-              <input type="hidden" name="action" value="restore">
-              <button type="submit">Restore</button>
-            {% else %}
-              <input type="hidden" name="action" value="hide">
-              <input type="text" name="reason" placeholder="Reason" required aria-label="Reason for hiding {{ job.title }}">
-              <button type="submit">Hide</button>
-            {% endif %}
-          </form>
-        </td>
-        <td>
-          <a href="{% url 'admin_dashboard:edit_job' job.id %}">Edit</a>
-          · <a href="{% url 'admin_dashboard:delete_job' job.id %}">Delete</a>
-        </td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="9">No postings match.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<p><a href="{% url 'admin_dashboard:dashboard' %}">Back to admin dashboard</a> · <a href="{% url 'home' %}">Home</a></p>
+                {% if not job.is_hidden %}
+                  <dialog class="modal" id="hide-{{ job.id }}" aria-labelledby="hide-{{ job.id }}-title" style="text-align:left">
+                    <form method="post" action="{% url 'admin_dashboard:moderate_job' job.id %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="hide">
+                      <div class="modal-body">
+                        <div class="modal-icon"><svg class="icon icon-lg" aria-hidden="true"><use href="#i-eye-off"/></svg></div>
+                        <h2 id="hide-{{ job.id }}-title">Hide “{{ job.title }}”?</h2>
+                        <p>It disappears from search and stops taking applications. Existing applications are kept, and the recruiter sees your reason.</p>
+                        <div class="field" style="margin-top:16px">
+                          <label for="reason-{{ job.id }}">Reason for hiding<span class="req" aria-hidden="true">*</span></label>
+                          <textarea id="reason-{{ job.id }}" name="reason" rows="3" required placeholder="e.g. Missing salary information" aria-label="Reason for hiding {{ job.title }}"></textarea>
+                        </div>
+                      </div>
+                      <div class="modal-actions">
+                        <button type="button" class="btn btn-ghost" data-dialog-close>Cancel</button>
+                        <button type="submit" class="btn btn-primary">Hide posting</button>
+                      </div>
+                    </form>
+                  </dialog>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <div class="empty-art"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg></div>
+      <h3>No postings match.</h3>
+      <p>{% if query or status %}Try a different search or status filter.{% else %}Once recruiters publish roles, they appear here for moderation.{% endif %}</p>
+      {% if query or status %}<a class="btn" href="{% url 'admin_dashboard:job_list' %}">Clear filters</a>{% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
